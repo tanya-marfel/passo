@@ -80,7 +80,7 @@ GARMIN_CLIENT_ID=...          # Optional: Garmin Connect developer app credentia
 GARMIN_CLIENT_SECRET=...
 ```
 
-*Passo includes offline fallbacks for everything: if Gemini or Gradium keys are omitted, Marmo runs on a deterministic rule-based coach using the same tool definitions, and voice falls back to the browser's Web Speech API.*
+*Passo runs offline without those keys. With no Gemini key, Marmo still calls the same race tools, then Gemma 3 1B (on this machine, via Transformers.js) speaks the line. The weights download once, about 800 MB, into `.cache/transformers`. Set `COACH=gemma` to force that even when a Gemini key is present, or `COACH=offline` to keep the built-in wording. Voice falls back to the browser's Web Speech API when Gradium is unset.*
 
 ---
 
@@ -95,6 +95,7 @@ GARMIN_CLIENT_SECRET=...
 | `src/lib/engine.ts` | Real-time simulation loop and asynchronous coach trigger queue |
 | `src/lib/coach/tools.ts` | Gemini tool declarations (`get_race_status`, `replan`, `speak`, etc.) |
 | `src/lib/coach/gemini.ts` | Multi-turn Gemini function-calling agent loop |
+| `src/lib/coach/gemma.ts` | Offline Gemma 3 1B, speaking the tool results on this machine |
 | `src/components/race/race-map.tsx` | MapLibre 3D terrain viewer with OpenFreeMap and AWS elevation tiles |
 | `src/components/race/battle-hud.tsx` | Retro Pokémon-inspired duel telemetry card, HP bar, and station pins |
 | `src/components/race/coach-panel.tsx` | Conversational decision cards and agent reasoning inspection |
@@ -105,7 +106,8 @@ GARMIN_CLIENT_SECRET=...
 
 ## Partner Technology
 
-- **Google DeepMind Gemini:** Marmo's autonomous brain. Multi-round function calling over course geometry, runner habits, and live race status.
+- **Google DeepMind Gemini:** Marmo's cloud brain when `GEMINI_API_KEY` is set. Multi-round function calling over course geometry, runner habits, and live race status.
+- **Gemma 3 1B:** The offline brain. Same race tools, spoken locally so a race still gets a coach with no network.
 - **Gradium:** Ultra-low latency voice output (TTS) and hands-free runner queries (STT).
 - **Entire:** Checkpoint tracking and workflow automation for autonomous AI pair-programming sessions.
 

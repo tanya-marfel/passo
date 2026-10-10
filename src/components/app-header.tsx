@@ -18,9 +18,17 @@ export function PartnerPills({ status, className }: { status: PartnerStatus | nu
   return (
     <div className={cn("flex items-center gap-3", className)}>
       <Status
-        on={status?.gemini}
-        label={!status ? "Coach" : status.gemini ? "Coach on" : "Coach off"}
-        hint={status?.gemini ? "Live decisions use Gemini." : "Using the built-in coach. Add a Gemini key on the server to switch."}
+        on={status ? status.coach !== "offline" : undefined}
+        label={!status ? "Coach" : status.coach === "gemini" ? "Gemini" : status.coach === "gemma" ? "Gemma" : "Rules"}
+        hint={
+          status?.coach === "gemini"
+            ? "Live decisions use Gemini."
+            : status?.coach === "gemma"
+              ? status.gemmaReady
+                ? "Gemma 3 1B is running on this machine. No call leaves the computer."
+                : "Gemma 3 1B is loading on this machine. The first line waits for that."
+              : "Using the built-in coach."
+        }
       />
       <Status
         on={status?.gradium}

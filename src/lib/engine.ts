@@ -473,7 +473,7 @@ export class RaceEngine {
     };
     let res: CoachResponse;
     try {
-      res = await requestCoach(req, onEvent, AbortSignal.timeout(30000));
+      res = await requestCoach(req, onEvent, AbortSignal.timeout(90000));
     } catch {
       res = offlineCoach(req, "The coach API was unreachable, so Marmo answered on-device.", this.ctx.plan);
     }

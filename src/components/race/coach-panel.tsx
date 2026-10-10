@@ -39,6 +39,7 @@ const QUICK = [
 
 function engineLabel(engine: CoachLine["engine"] | undefined, model?: string) {
   if (engine === "gemini") return model ? model.replace(/^models\//, "") : "Gemini";
+  if (engine === "gemma") return model ?? "Gemma";
   return "Offline rules";
 }
 
@@ -71,7 +72,11 @@ function ThinkingState({ turn }: { turn: CoachTurn }) {
         </div>
       ) : (
         <p className="text-xs text-muted-foreground">
-          {turn.engine === "gemini" ? "Consulting Gemini AI with your live telemetry…" : "Evaluating course rules and split times…"}
+          {turn.engine === "gemini"
+            ? "Consulting Gemini with your live telemetry…"
+            : turn.engine === "gemma"
+              ? "Gemma is writing the call on this machine…"
+              : "Evaluating course rules and split times…"}
         </p>
       )}
     </div>
@@ -316,7 +321,7 @@ function TurnCard({ turn }: { turn: CoachTurn }) {
             className="flex items-center justify-between w-full text-[10.5px] text-muted-foreground hover:text-foreground transition"
           >
             <span className="flex items-center gap-1">
-              <Badge variant={engine === "gemini" ? "default" : "secondary"} className="h-3.5 px-1 text-[9px]">
+              <Badge variant={engine === "gemini" || engine === "gemma" ? "default" : "secondary"} className="h-3.5 px-1 text-[9px]">
                 {engineLabel(engine, res?.model ?? turn.model)}
               </Badge>
               <span>{steps.length} tool {steps.length === 1 ? "call" : "calls"} {res ? `· ${(res.latencyMs / 1000).toFixed(1)}s` : ""}</span>
@@ -503,7 +508,13 @@ export function CoachPanel({
           <ScrollArea className="h-full max-h-[52vh] pr-2 lg:max-h-none">
             <div className="space-y-2 pb-2">
               <div className="flex items-center justify-between px-1 text-[11px] text-muted-foreground">
-                <span>{status?.gemini ? "Live decisions powered by Gemini." : "Decisions use offline rule engine."}</span>
+                <span>
+                  {status?.coach === "gemini"
+                    ? "Live decisions powered by Gemini."
+                    : status?.coach === "gemma"
+                      ? "Live lines are spoken by Gemma 3 1B on this machine."
+                      : "Decisions use the built-in coach."}
+                </span>
               </div>
               {view.turns.length === 0 && (
                 <div className="py-10 text-center text-xs text-muted-foreground">

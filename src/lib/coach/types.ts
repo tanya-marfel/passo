@@ -59,7 +59,7 @@ export type CoachStep = {
 };
 
 export type CoachResponse = {
-  engine: "gemini" | "offline";
+  engine: "gemini" | "gemma" | "offline";
   model?: string;
   decision: "speak" | "silent";
   message: string;
