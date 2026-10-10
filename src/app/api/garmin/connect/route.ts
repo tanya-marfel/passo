@@ -13,7 +13,7 @@ function home(request: Request, flag: string, reason?: string) {
 export async function GET(request: Request) {
   if (!garminConfigured()) {
     return NextResponse.redirect(
-      home(request, "error", "Garmin's sign-in can't grant RaceIQ access until GARMIN_CLIENT_ID and GARMIN_CLIENT_SECRET are set."),
+      home(request, "error", "Garmin sign-in isn't available on this server yet."),
     );
   }
   const { verifier, challenge, state } = createPkce();

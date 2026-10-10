@@ -42,16 +42,13 @@ GARMIN_CLIENT_SECRET=...
 GARMIN_REDIRECT_URI=...       # optional; defaults to this site's /api/garmin/callback
 ```
 
-Without Gemini or Gradium keys everything still works: Marmo runs on an offline rule engine that uses the same tools, and voice falls back to the browser's speech synthesis and recognition (Chrome works best). The header pills show which mode is active. Garmin sign-in needs its own developer app; until those two values are set, use the sample runner.
+Without Gemini or Gradium keys everything still works: Marmo runs on an offline rule engine that uses the same tools, and voice falls back to the browser's speech synthesis and recognition (Chrome works best). The header pills show which mode is active.
 
 ## Connecting Garmin
 
-1. Create an app in the [Garmin Connect Developer Program](https://developerportal.garmin.com/) with **Activity Export** and **Historical Data** enabled.
-2. Set the redirect URI to `http://localhost:4590/api/garmin/callback` (or your public origin plus `/api/garmin/callback`).
-3. Set the activity push or ping URL to `https://YOUR_HOST/api/garmin/webhook`. Garmin delivers history to that URL after you approve access, so it has to be reachable from the internet. Localhost alone will sign you in and then wait.
-4. Put the client id and secret in `.env.local` and restart the dev server.
+**Sign in with Garmin** sends the runner to Garmin Connect. They sign in there and allow RaceIQ to read their activities. The screen never asks for a client id or secret. Those belong to the RaceIQ server, the same way Nike Run Club keeps its own Garmin registration on Nike's servers.
 
-Sign in with Garmin leaves this app for Garmin's sign-in at connect.garmin.com. After you allow access, Garmin returns you here. The best signal still comes from your longest runs and races, ideally trail runs with real climbs.
+To turn that button on, register RaceIQ once in the [Garmin Connect Developer Program](https://developerportal.garmin.com/) with Activity Export and Historical Data, set the redirect URI to `http://localhost:4590/api/garmin/callback`, set the activity webhook to a public `https://YOUR_HOST/api/garmin/webhook`, and put the client id and secret in `.env.local`. Restart the dev server. Until then, use the sample runner.
 
 ## Demo script (about 3 minutes)
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Lock, Sparkles, Watch } from "lucide-react";
 import { buildProfile, type RunnerProfile } from "@/lib/profile";
@@ -47,31 +47,10 @@ export function ImportScreen({
 }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [configured, setConfigured] = useState<boolean | null>(null);
-  const origin = useSyncExternalStore(
-    () => () => {},
-    () => window.location.origin,
-    () => "",
-  );
   const returnedError =
     garminFlag && garminFlag !== "connected"
       ? garminReason || (garminFlag === "denied" ? "You cancelled sign-in on Garmin." : "Garmin sign-in didn't finish.")
       : null;
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/garmin/session")
-      .then((r) => r.json())
-      .then((body: { configured?: boolean }) => {
-        if (!cancelled) setConfigured(Boolean(body.configured));
-      })
-      .catch(() => {
-        if (!cancelled) setConfigured(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     if (garminFlag !== "connected") return;
@@ -157,11 +136,7 @@ export function ImportScreen({
                   </div>
                   <div>
                     <p className="font-medium">Connect your Garmin account</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {configured
-                        ? "This opens Garmin Connect. Sign in with your Garmin account and allow RaceIQ to read your activities."
-                        : "This opens Garmin Connect once the app's client id and secret are in .env.local. You sign in there and allow RaceIQ to read your activities."}
-                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">This opens Garmin Connect. Sign in with your Garmin account and allow RaceIQ to read your activities.</p>
                   </div>
                   <div className="flex flex-wrap justify-center gap-2">
                     <Button size="lg" asChild>
@@ -184,16 +159,6 @@ export function ImportScreen({
           {(error || returnedError) && (
             <p className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-red-200">{error || returnedError}</p>
           )}
-
-          <details className="mt-4 text-sm text-muted-foreground">
-            <summary className="cursor-pointer text-foreground/80">Garmin shows the allow screen for a registered app</summary>
-            <ol className="mt-2 list-decimal space-y-1 pl-5">
-              <li>In the Garmin Connect developer program, create an app and paste its client id and secret into .env.local.</li>
-              <li>Redirect URI: {origin ? `${origin}/api/garmin/callback` : "/api/garmin/callback"}</li>
-              <li>Activity webhook: {origin ? `${origin}/api/garmin/webhook` : "/api/garmin/webhook"}</li>
-              <li>Enable Activity Export and Historical Data. Restart the dev server, then use Sign in with Garmin.</li>
-            </ol>
-          </details>
         </section>
 
         <section className="relative">
