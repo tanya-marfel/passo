@@ -44,11 +44,12 @@ export function LiveRace({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
+      if (e.code !== "Space" || e.repeat) return;
       if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
-      if (e.code === "Space") {
-        e.preventDefault();
-        engine.togglePlay();
-      }
+      // A focused button already activates on Space. Handling it here too toggles twice, so Resume lands back on paused.
+      if (el?.closest("button, a, select")) return;
+      e.preventDefault();
+      engine.togglePlay();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

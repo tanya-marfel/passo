@@ -198,12 +198,16 @@ export class RaceEngine {
 
   start(): void {
     if (this.s.finished) return;
+    const resuming = this.ui.started;
     if (!this.ui.started) {
       this.ui.started = true;
       this.pushLog("The race begins in Cortina! Headlamps on.", "system");
       this.enqueue({ type: "race_start" }, 0);
     }
     this.ui.playing = true;
+    // Pause leaves the current coach line's speak() open, and holdForCoach keeps
+    // the clock frozen until that promise settles. Resume has to run the clock now.
+    if (resuming) this.holding = false;
     this.speaker?.resume();
     this.emitNow();
   }
