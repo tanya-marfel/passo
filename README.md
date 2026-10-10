@@ -26,7 +26,11 @@ Open http://localhost:4590. Click **Try the sample runner** for a demo profile, 
 
 ### API keys (optional)
 
-Create `.env.local` (or add these as secrets in your hosting or Cursor Cloud Agents dashboard):
+Copy the template and fill in the keys you have (or add them as secrets in your hosting or Cursor Cloud Agents dashboard). `.env.local` is gitignored, and `npm run dev` picks up changes to it without a restart.
+
+```bash
+cp .env.example .env.local
+```
 
 ```bash
 GEMINI_API_KEY=...            # or GOOGLE_API_KEY; enables the Gemini agent
