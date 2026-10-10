@@ -1,4 +1,4 @@
-import { course, nextStation, stationD, climbStartD, climbEndD, rangeStats, localClockSec } from "@/lib/course";
+import { course, nextStation, stationD, climbStartD, climbEndD, rangeStats, localClockSec, TOTAL_M } from "@/lib/course";
 import { timeAtDistance, distanceAtTime, type Plan } from "@/lib/plan";
 import { fmtDuration, fmtHm, fmtPace } from "@/lib/format";
 import type { CoachAction, CoachRequest, CoachResponse, CoachStep } from "@/lib/coach/types";
@@ -322,6 +322,10 @@ function decide(ctx: ToolContext, steps: CoachStep[]): Draft {
     case "checkin": {
       const status = call(steps, "get_race_status", {}, () => getRaceStatus(ctx));
       const lastGel = live.lastGelAgoMin;
+      const nearFinish = TOTAL_M - live.d < 3000;
+      if (nearFinish && live.hp >= 20) {
+        return { message: "", tone: "calm", silent: true };
+      }
       if (live.hp < 50 || lastGel > 50) {
         ctx.actions.push({ type: "eat" });
         return {

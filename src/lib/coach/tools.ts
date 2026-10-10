@@ -39,18 +39,21 @@ function relTime(sec: number) {
   return `${fmtHm(a * 60)} ${sec > 0 ? "behind" : "ahead"}`;
 }
 
-export function projectFromLive(ctx: ToolContext, effort?: number, extraStopSec = 0) {
+/** Projects the rest of the race from the live state; `effort` applies for `effortForSec`, then the current effort resumes. */
+export function projectFromLive(ctx: ToolContext, effort?: number, extraStopSec = 0, effortForSec = Infinity) {
   const { live, profile } = ctx.req;
   const i = Math.min(N_POINTS - 1, Math.ceil(live.d / STEP_M));
-  const e = clamp(effort ?? live.effort, 0.7, 1.3);
-  let cond = (1 / e) * (1 + 0.06 * live.debt);
+  const base = clamp(live.effort, 0.7, 1.3);
+  const e = clamp(effort ?? base, 0.7, 1.3);
+  let cond = (1 / base) * (1 + 0.06 * live.debt);
   if (live.hp < 20) cond *= 1 + ((20 - live.hp) / 20) * 0.4;
   if (live.status.includes("cramp")) cond *= 1.06;
+  const until = live.t + effortForSec;
   const next = nextStation(live.d, (s) => s.kind !== "checkpoint");
   const tl = runTimeline(
     { model: profile.model, effortScale: ctx.plan.effortScale * cond, beta: raceBeta(profile) },
     (st) => (st.id === live.stopAt ? 0 : planStopSec(st) + (next && st.id === next.id ? extraStopSec : 0)),
-    { fromIdx: i, fromT: live.t, skipStopAtFrom: live.stopAt !== null },
+    { fromIdx: i, fromT: live.t, skipStopAtFrom: live.stopAt !== null, mult: e === base ? undefined : (_, t) => (t < until ? base / e : 1) },
   );
   const arrivals: Record<string, number> = {};
   for (const st of course.aidStations) {
@@ -216,7 +219,7 @@ export function replan(
   const extra = clamp(Number(args.extra_stop_min) || 0, 0, 30) * 60;
   const before = projectFromLive(ctx);
   const effort = clamp(ctx.req.live.effort * (1 + pct / 100), 0.75, 1.2);
-  const after = projectFromLive(ctx, effort, extra);
+  const after = projectFromLive(ctx, effort, extra, duration * 60);
   if (pct !== 0)
     ctx.actions.push({ type: "set_effort", value: Math.round(effort * 100) / 100, reason: String(args.reason ?? ""), durationMin: duration });
   return {
@@ -258,8 +261,8 @@ export const TOOL_DECLARATIONS = [
   },
   {
     name: "get_race_status",
+    // No parameters key: Gemini rejects object schemas with empty properties.
     description: "Live status: clock, energy (HP), status effects, gap to plan and to the shadow rival, projected finish and cut-off margins.",
-    parameters: { type: "object", properties: {} },
   },
   {
     name: "replan",
