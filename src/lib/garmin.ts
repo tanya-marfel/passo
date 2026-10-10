@@ -13,7 +13,7 @@ export type Activity = {
   sport: string;
   startMs: number;
   points: ActivityPoint[];
-  source: "gpx" | "tcx" | "fit" | "sample";
+  source: "gpx" | "tcx" | "fit" | "garmin-api" | "sample";
   fileName?: string;
 };
 
@@ -22,7 +22,7 @@ export type ImportResult = {
   skipped: { file: string; reason: string }[];
 };
 
-type RawPoint = { time: number; lat?: number; lon?: number; ele?: number; dist?: number; hr?: number };
+export type RawPoint = { time: number; lat?: number; lon?: number; ele?: number; dist?: number; hr?: number };
 
 const R = 6371000;
 function haversine(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -50,7 +50,7 @@ function num(el: Element | null) {
   return Number.isFinite(v) ? v : undefined;
 }
 
-function toActivity(
+export function activityFromSamples(
   raw: RawPoint[],
   meta: { name: string; sport: string; source: Activity["source"]; fileName: string },
 ): Activity | string {
@@ -112,7 +112,7 @@ function parseGpx(text: string, fileName: string) {
       hr: num(descendant(el, "hr")),
     });
   }
-  return toActivity(raw, { name, sport, source: "gpx", fileName });
+  return activityFromSamples(raw, { name, sport, source: "gpx", fileName });
 }
 
 function parseTcx(text: string, fileName: string) {
@@ -138,7 +138,7 @@ function parseTcx(text: string, fileName: string) {
       hr: hrEl ? num(child(hrEl, "Value")) : undefined,
     });
   }
-  return toActivity(raw, { name: fileName.replace(/\.[^.]+$/, ""), sport, source: "tcx", fileName });
+  return activityFromSamples(raw, { name: fileName.replace(/\.[^.]+$/, ""), sport, source: "tcx", fileName });
 }
 
 async function parseFit(bytes: Uint8Array, fileName: string) {
@@ -159,7 +159,7 @@ async function parseFit(bytes: Uint8Array, fileName: string) {
     dist: r.distance as number | undefined,
     hr: r.heartRate as number | undefined,
   }));
-  return toActivity(raw, { name: fileName.replace(/\.[^.]+$/, ""), sport, source: "fit", fileName });
+  return activityFromSamples(raw, { name: fileName.replace(/\.[^.]+$/, ""), sport, source: "fit", fileName });
 }
 
 export type ImportProgress = (message: string) => void;
@@ -217,6 +217,12 @@ async function parseEntry(name: string, bytes: Uint8Array, depth: number, result
   } catch (err) {
     result.skipped.push({ file: name, reason: err instanceof Error ? err.message : "could not be parsed" });
   }
+}
+
+export async function importActivityBytes(name: string, bytes: Uint8Array): Promise<ImportResult> {
+  const result: ImportResult = { activities: [], skipped: [] };
+  await parseEntry(name, bytes, 0, result);
+  return result;
 }
 
 export async function importFiles(files: File[], progress?: ImportProgress): Promise<ImportResult> {

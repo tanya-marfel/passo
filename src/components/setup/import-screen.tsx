@@ -1,13 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
-import { FileUp, Loader2, Lock, Sparkles, Upload } from "lucide-react";
-import { cn } from "cn";
-import { importFiles } from "@/lib/garmin";
+import { Loader2, Lock, Sparkles, Watch } from "lucide-react";
 import { buildProfile, type RunnerProfile } from "@/lib/profile";
 import { sampleActivities } from "@/lib/sample";
 import { course } from "@/lib/course";
+import type { Activity } from "@/lib/garmin";
+import { clearSearchFlags } from "@/lib/search-flag";
 import type { PartnerStatus } from "@/hooks/use-partner-status";
 import { AppHeader } from "@/components/app-header";
 import { MarmoSprite, RunnerSprite, ShadowSprite } from "@/components/sprites";
@@ -16,45 +16,108 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 const STEPS = [
-  { title: "Read your runs", body: "Pace on flats, climbs and descents, how you fade, how you fuel, how long you stop. All parsed on your device." },
+  { title: "Sign in with Garmin", body: "You leave this page, sign in on Garmin Connect, and come back. Rival Run never sees your password." },
   { title: "Meet your Shadow", body: "A rival built from your habits: same legs, same mistakes. It runs Lavaredo the way the old you would." },
   { title: "Race with Marmo", body: "A live AI coach on a 3D course. It watches every km, calls the climbs and replans when things go wrong." },
 ];
 
 const nextTick = () => new Promise((r) => setTimeout(r, 30));
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export function ImportScreen({ status, onProfile }: { status: PartnerStatus | null; onProfile: (p: RunnerProfile) => void }) {
-  const inputRef = useRef<HTMLInputElement>(null);
+type SyncBody = {
+  status?: "ready" | "waiting";
+  activities?: Activity[];
+  skipped?: { file: string; reason: string }[];
+  message?: string | null;
+  error?: string;
+};
+
+export function ImportScreen({
+  status,
+  garminFlag,
+  garminReason,
+  onProfile,
+  onGarminDone,
+}: {
+  status: PartnerStatus | null;
+  garminFlag: string | null;
+  garminReason: string | null;
+  onProfile: (p: RunnerProfile) => void;
+  onGarminDone: () => void;
+}) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [skipped, setSkipped] = useState<{ file: string; reason: string }[]>([]);
-  const [dragging, setDragging] = useState(false);
+  const [configured, setConfigured] = useState<boolean | null>(null);
+  const origin = useSyncExternalStore(
+    () => () => {},
+    () => window.location.origin,
+    () => "",
+  );
+  const returnedError =
+    garminFlag && garminFlag !== "connected"
+      ? garminReason || (garminFlag === "denied" ? "You cancelled sign-in on Garmin." : "Garmin sign-in didn't finish.")
+      : null;
 
-  const handleFiles = async (list: FileList | File[]) => {
-    const files = Array.from(list);
-    if (!files.length) return;
-    setError(null);
-    setSkipped([]);
-    setBusy(`Reading ${files.length} file${files.length > 1 ? "s" : ""}…`);
-    await nextTick();
-    try {
-      const res = await importFiles(files, setBusy);
-      setSkipped(res.skipped);
-      if (!res.activities.length) {
-        setError("No runs with GPS and timestamps were found in those files. Try FIT, GPX or TCX exports of your runs.");
-        return;
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/garmin/session")
+      .then((r) => r.json())
+      .then((body: { configured?: boolean }) => {
+        if (!cancelled) setConfigured(Boolean(body.configured));
+      })
+      .catch(() => {
+        if (!cancelled) setConfigured(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (garminFlag !== "connected") return;
+    let cancelled = false;
+    const collect = async () => {
+      setError(null);
+      setBusy("Signed in on Garmin. Collecting your runs…");
+      const deadline = Date.now() + 45000;
+      try {
+        for (;;) {
+          const res = await fetch("/api/garmin/activities", { cache: "no-store" });
+          const body = (await res.json().catch(() => null)) as SyncBody | null;
+          if (!res.ok) throw new Error(body?.error || "Couldn't read the Garmin session.");
+          const activities = body?.activities ?? [];
+          if (activities.length) {
+            setBusy(`Marmo is studying ${activities.length} run${activities.length > 1 ? "s" : ""}…`);
+            await nextTick();
+            const profile = buildProfile(activities, { source: "garmin-connect" });
+            const skipped = body?.skipped?.length ?? 0;
+            if (skipped) toast.info(`Analysed ${profile.activityCount} runs, skipped ${skipped}.`);
+            onProfile(profile);
+            onGarminDone();
+            return;
+          }
+          if (cancelled) return;
+          if (Date.now() > deadline) {
+            setError(body?.message || "Garmin hasn't sent your runs yet. The webhook URL has to be reachable from the internet.");
+            onGarminDone();
+            return;
+          }
+          setBusy(body?.message || "Waiting for Garmin to send your runs…");
+          await sleep(3000);
+        }
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Those runs couldn't be read.");
+        onGarminDone();
+      } finally {
+        if (!cancelled) setBusy(null);
       }
-      setBusy(`Marmo is studying ${res.activities.length} run${res.activities.length > 1 ? "s" : ""}…`);
-      await nextTick();
-      const profile = buildProfile(res.activities, { source: "garmin" });
-      if (res.skipped.length) toast.info(`Analysed ${profile.activityCount} runs, skipped ${res.skipped.length} file${res.skipped.length > 1 ? "s" : ""}.`);
-      onProfile(profile);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Those files couldn't be read.");
-    } finally {
-      setBusy(null);
-    }
-  };
+    };
+    void collect();
+    return () => {
+      cancelled = true;
+    };
+  }, [garminFlag, garminReason, onGarminDone, onProfile]);
 
   const loadSample = async () => {
     setError(null);
@@ -62,6 +125,7 @@ export function ImportScreen({ status, onProfile }: { status: PartnerStatus | nu
     await nextTick();
     try {
       onProfile(buildProfile(sampleActivities(), { source: "sample", name: "Sample runner" }));
+      onGarminDone();
     } finally {
       setBusy(null);
     }
@@ -72,28 +136,14 @@ export function ImportScreen({ status, onProfile }: { status: PartnerStatus | nu
       <AppHeader status={status} />
       <main className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-10 px-4 py-8 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:py-12">
         <section>
-          <div className="font-pixel text-[9px] leading-relaxed text-primary">
-            {course.name.toUpperCase()} · JUNE 2027
-          </div>
+          <div className="font-pixel text-[9px] leading-relaxed text-primary">{course.name.toUpperCase()} · JUNE 2027</div>
           <h1 className="mt-3 text-4xl font-semibold tracking-tight text-balance sm:text-5xl">Race the runner you used to be.</h1>
           <p className="mt-4 max-w-xl text-base text-pretty text-muted-foreground sm:text-lg">
             Rival Run reads your Garmin history, finds the mistakes you keep making and turns them into your <span className="text-shadow">Shadow</span>: a rival that runs
             Lavaredo exactly like the old you. <span className="text-primary">Marmo</span>, your AI trail coach, calls the race live, kilometre by kilometre.
           </p>
 
-          <Card
-            className={cn("mt-7 border-2 border-dashed transition", dragging ? "border-primary bg-primary/5" : "border-white/15")}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragging(true);
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragging(false);
-              void handleFiles(e.dataTransfer.files);
-            }}
-          >
+          <Card className="mt-7 border-2 border-dashed border-white/15">
             <CardContent className="flex flex-col items-center gap-3 py-7 text-center">
               {busy ? (
                 <>
@@ -103,60 +153,45 @@ export function ImportScreen({ status, onProfile }: { status: PartnerStatus | nu
               ) : (
                 <>
                   <div className="grid size-12 place-items-center rounded-full bg-primary/15 text-primary">
-                    <Upload className="size-6" />
+                    <Watch className="size-6" />
                   </div>
                   <div>
-                    <p className="font-medium">Drop your Garmin runs here</p>
-                    <p className="mt-1 text-sm text-muted-foreground">FIT, GPX, TCX or a Garmin Connect ZIP export. Your longest runs tell Marmo the most.</p>
+                    <p className="font-medium">Connect your Garmin account</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {configured
+                        ? "You'll leave Rival Run, sign in on connect.garmin.com, and come straight back."
+                        : "Sign-in opens Garmin's own page once a Connect developer app is configured. The sample runner works until then."}
+                    </p>
                   </div>
                   <div className="flex flex-wrap justify-center gap-2">
-                    <Button size="lg" onClick={() => inputRef.current?.click()}>
-                      <FileUp /> Choose files
+                    <Button size="lg" asChild>
+                      <a href="/api/garmin/connect">
+                        <Watch /> Connect Garmin
+                      </a>
                     </Button>
-                    <Button size="lg" variant="secondary" onClick={loadSample}>
+                    <Button size="lg" variant="secondary" onClick={() => void loadSample()}>
                       <Sparkles /> Try the sample runner
                     </Button>
                   </div>
                   <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Lock className="size-3" /> Files are parsed in your browser. Only a compact summary goes to the coach.
+                    <Lock className="size-3" /> You sign in on Garmin. Rival Run never sees your password.
                   </p>
                 </>
               )}
-              <input
-                ref={inputRef}
-                type="file"
-                name="garmin-files"
-                multiple
-                accept=".fit,.gpx,.tcx,.zip,application/zip,application/gpx+xml"
-                className="hidden"
-                onChange={(e) => {
-                  if (e.target.files) void handleFiles(e.target.files);
-                  e.target.value = "";
-                }}
-              />
             </CardContent>
           </Card>
 
-          {error && <p className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-red-200">{error}</p>}
-          {skipped.length > 0 && (
-            <details className="mt-2 text-xs text-muted-foreground">
-              <summary className="cursor-pointer">{skipped.length} file{skipped.length > 1 ? "s" : ""} skipped</summary>
-              <ul className="mt-1 space-y-0.5">
-                {skipped.slice(0, 12).map((s) => (
-                  <li key={s.file}>
-                    {s.file}: {s.reason}
-                  </li>
-                ))}
-              </ul>
-            </details>
+          {(error || returnedError) && (
+            <p className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-red-200">{error || returnedError}</p>
           )}
 
           <details className="mt-4 text-sm text-muted-foreground">
-            <summary className="cursor-pointer text-foreground/80">How do I export from Garmin Connect?</summary>
+            <summary className="cursor-pointer text-foreground/80">What to register on the Garmin developer portal</summary>
             <ol className="mt-2 list-decimal space-y-1 pl-5">
-              <li>Open a run on connect.garmin.com, click the gear icon and choose Export Original (a ZIP with the FIT file) or Export to GPX/TCX.</li>
-              <li>For your whole history: Account settings, Data Management, Export Your Data. Drop the ZIP as is.</li>
-              <li>Pick your 5 to 15 longest runs and races, ideally trail runs with real climbs.</li>
+              <li>Create an app in the Garmin Connect Developer Program and paste its client id and secret into .env.local.</li>
+              <li>Redirect URI: {origin ? `${origin}/api/garmin/callback` : "/api/garmin/callback"}</li>
+              <li>Activity webhook: {origin ? `${origin}/api/garmin/webhook` : "/api/garmin/webhook"}</li>
+              <li>Allow Activity Export and Historical Data, then restart the dev server.</li>
             </ol>
           </details>
         </section>
@@ -179,7 +214,7 @@ export function ImportScreen({ status, onProfile }: { status: PartnerStatus | nu
             <div className="mt-2 flex items-start gap-3">
               <MarmoSprite height={64} />
               <div className="rpg-box flex-1 px-3 py-2 text-sm">
-                119.5 km, 5,000 m of climbing and 8 gyms between Cortina and the Tre Cime. Show me your runs and I&apos;ll show you exactly where your Shadow will beat you.
+                119.5 km, 5,000 m of climbing and 8 gyms between Cortina and the Tre Cime. Connect Garmin and I&apos;ll show you exactly where your Shadow will beat you.
               </div>
             </div>
           </div>
@@ -200,4 +235,8 @@ export function ImportScreen({ status, onProfile }: { status: PartnerStatus | nu
       </footer>
     </div>
   );
+}
+
+export function finishGarminReturn() {
+  clearSearchFlags(["garmin", "reason"]);
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { AlertTriangle, ArrowRight, Mountain, Play, Timer, Upload } from "lucide-react";
+import { AlertTriangle, ArrowRight, Mountain, Play, RotateCcw, Timer } from "lucide-react";
 import { cn } from "cn";
 import { course } from "@/lib/course";
 import { buildPlan, type GoalId, type Plan } from "@/lib/plan";
@@ -68,7 +68,7 @@ function TrainerCard({ profile, onRename }: { profile: RunnerProfile; onRename: 
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="text-xs text-muted-foreground">
-          {profile.source === "sample" ? "Sample history" : "Garmin history"}: {profile.activityCount} runs · {fmtDate(profile.dateRange.from)} to {fmtDate(profile.dateRange.to)} ·{" "}
+          {profile.source === "sample" ? "Sample history" : profile.source === "garmin-connect" ? "Synced from Garmin Connect" : "Garmin history"}: {profile.activityCount} runs · {fmtDate(profile.dateRange.from)} to {fmtDate(profile.dateRange.to)} ·{" "}
           {Math.round(t.km).toLocaleString("en-GB")} km · {Math.round(t.gain).toLocaleString("en-GB")} m up · {Math.round(t.hours)} h
         </div>
         <div className="space-y-1.5">
@@ -307,7 +307,7 @@ export function ProfileScreen({
     <div className="flex min-h-dvh flex-col">
       <AppHeader status={status}>
         <Button variant="ghost" size="sm" onClick={onNewData}>
-          <Upload /> New data
+          <RotateCcw /> Start over
         </Button>
       </AppHeader>
       <main className="mx-auto grid w-full max-w-7xl grid-cols-[minmax(0,1fr)] gap-5 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">

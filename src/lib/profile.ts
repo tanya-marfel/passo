@@ -46,7 +46,7 @@ export type TrainerStats = {
 
 export type RunnerProfile = {
   name: string;
-  source: "garmin" | "sample";
+  source: "garmin" | "garmin-connect" | "sample";
   activityCount: number;
   dateRange: { from: number; to: number };
   totals: {
@@ -347,9 +347,9 @@ function climbStats(x: Analysed): ClimbStat[] {
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 const score = (v: number, lo: number, hi: number) => Math.round(clamp(((v - lo) / (hi - lo)) * 90 + 10, 5, 100));
 
-export function buildProfile(activities: Activity[], opts: { name?: string; source: "garmin" | "sample" }): RunnerProfile {
+export function buildProfile(activities: Activity[], opts: { name?: string; source: RunnerProfile["source"] }): RunnerProfile {
   const all = activities.map(analyseActivity).filter((x) => x.chunks.length >= 8);
-  if (!all.length) throw new Error("No usable runs found. Upload running activities with GPS and timestamps.");
+  if (!all.length) throw new Error("No usable runs found. Garmin needs running activities with GPS and timestamps.");
   const model = fitModel(all);
   const long = all.filter((x) => x.movingH >= 1.6).map((x) => longRunStats(x, model.gapOf));
   const climbs = all.filter((x) => x.movingH >= 1.2).flatMap(climbStats);

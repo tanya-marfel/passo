@@ -23,7 +23,7 @@ const pressStart = Press_Start_2P({
 export const metadata: Metadata = {
   title: "Rival Run · Beat your shadow at Lavaredo",
   description:
-    "Upload your Garmin history, meet the Shadow that makes your usual mistakes, and race Lavaredo Ultra Trail 120K with Marmo, a live AI trail coach.",
+    "Sign in with Garmin Connect, meet the Shadow that makes your usual mistakes, and race Lavaredo Ultra Trail 120K with Marmo, a live AI trail coach.",
 };
 
 export const viewport: Viewport = {

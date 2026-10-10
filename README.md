@@ -6,7 +6,7 @@ Built for an agentic AI hackathon with Google DeepMind Gemini (agent brain), Gra
 
 ## What it does
 
-1. **Import your runs.** Drop Garmin FIT, GPX, TCX or a Garmin Connect ZIP export. Files are parsed in the browser. Rival Run fits a personal pace model (flat pace, climbing speed, descent skill, fatigue curve) and detects recurring mistakes: fast starts, attacking long climbs then stalling, late fades, under-fuelling, lingering at aid stations, braking on descents and heart-rate drift. It also notes if you have never run this long or in the dark.
+1. **Connect Garmin.** Connect Garmin sends you to connect.garmin.com. You sign in there, allow activity access, and come back. Rival Run never sees your password. From the runs Garmin delivers, it fits a personal pace model (flat pace, climbing speed, descent skill, fatigue curve) and detects recurring mistakes: fast starts, attacking long climbs then stalling, late fades, under-fuelling, lingering at aid stations, braking on descents and heart-rate drift. It also notes if you have never run this long or in the dark.
 2. **Meet your Shadow.** Each mistake becomes one of the Shadow's moves ("Fast Start", "Reckless Climb", "Empty Tank", ...), with the evidence from your runs and Marmo's counter.
 3. **Plan Lavaredo.** The official 120K GPX with race-book aid stations and cut-offs gives you an even-effort plan for a Safe, "Your data" or Stretch goal, the cut-off margins, and the Shadow's projected race.
 4. **Race it live.** The race clock starts on Friday at 23:00 in Cortina. The simulated runner carries your habits unless Marmo talks you out of them. Climbs are gyms with badges, energy is an HP bar, aid stations restore energy, and cramps, storms and the night low are status effects.
@@ -22,7 +22,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:4590. Click **Try the sample runner** for a demo profile, or drop your own Garmin files.
+Open http://localhost:4590. Click **Try the sample runner** for a demo profile, or **Connect Garmin** to sign in on Garmin Connect.
 
 ### API keys (optional)
 
@@ -37,19 +37,25 @@ GEMINI_API_KEY=...            # or GOOGLE_API_KEY; enables the Gemini agent
 GEMINI_MODEL=gemini-2.5-flash # optional; by default the newest Gemini Flash model is picked
 GRADIUM_API_KEY=...           # enables Gradium TTS and STT
 GRADIUM_VOICE_ID=...          # optional; defaults to the flagship voice "Russell" (_6Aslh2DxfmnRLmP)
+GARMIN_CLIENT_ID=...          # Garmin Connect developer app; enables Connect sign-in
+GARMIN_CLIENT_SECRET=...
+GARMIN_REDIRECT_URI=...       # optional; defaults to this site's /api/garmin/callback
 ```
 
-Without keys everything still works: Marmo runs on an offline rule engine that uses the same tools, and voice falls back to the browser's speech synthesis and recognition (Chrome works best). The header pills show which mode is active.
+Without Gemini or Gradium keys everything still works: Marmo runs on an offline rule engine that uses the same tools, and voice falls back to the browser's speech synthesis and recognition (Chrome works best). The header pills show which mode is active. Garmin sign-in needs its own developer app; until those two values are set, use the sample runner.
 
-## Getting your Garmin data
+## Connecting Garmin
 
-- **One run:** open it on connect.garmin.com, click the gear icon, then **Export Original** (ZIP with the FIT file) or **Export to GPX/TCX**.
-- **Everything:** Account settings, Data Management, **Export Your Data**. Drop the ZIP as is.
-- The best signal comes from your 5 to 15 longest runs and races, ideally trail runs with real climbs.
+1. Create an app in the [Garmin Connect Developer Program](https://developerportal.garmin.com/) with **Activity Export** and **Historical Data** enabled.
+2. Set the redirect URI to `http://localhost:4590/api/garmin/callback` (or your public origin plus `/api/garmin/callback`).
+3. Set the activity push or ping URL to `https://YOUR_HOST/api/garmin/webhook`. Garmin delivers history to that URL after you approve access, so it has to be reachable from the internet. Localhost alone will sign you in and then wait.
+4. Put the client id and secret in `.env.local` and restart the dev server.
+
+Connect Garmin leaves this app, opens Garmin's own sign-in page, and returns here. The best signal still comes from your longest runs and races, ideally trail runs with real climbs.
 
 ## Demo script (about 3 minutes)
 
-1. Drop a Garmin export. The trainer card shows your stats; **Your Shadow's moves** lists the mistakes found in your runs.
+1. Click **Connect Garmin** (or **Try the sample runner**). The trainer card shows your stats; **Your Shadow's moves** lists the mistakes found in your runs.
 2. Pick a goal, compare your plan with your Shadow's finish, and click **Start live race**.
 3. Click **Start the race**: Marmo briefs you (voice) and your Shadow sprints off with Fast Start.
 4. At the first gym Marmo tells you how to pace the climb; at the summit you earn a badge.
@@ -64,7 +70,9 @@ Keyboard: **Space** pauses and resumes. Click or drag on the elevation profile t
 
 | Path | What it does |
 | --- | --- |
-| `src/lib/garmin.ts` | FIT (Garmin FIT SDK), GPX, TCX and ZIP parsing in the browser |
+| `src/lib/garmin.ts` | FIT (Garmin FIT SDK), GPX and TCX parsing for runs Garmin delivers |
+| `src/lib/garmin-connect/` | Garmin Connect OAuth redirect, token exchange and activity ingest |
+| `src/app/api/garmin/` | Sign-in redirect, callback, session and the activity webhook |
 | `src/lib/profile.ts` | Pace model, trainer stats and mistake detection |
 | `src/lib/plan.ts` | Plan and Shadow timelines, goals, splits and cut-off margins |
 | `src/lib/sim.ts` | Race simulation: habits, energy, status effects, badges and coach events |
