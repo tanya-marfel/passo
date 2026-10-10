@@ -105,7 +105,7 @@ export type RaceView = UiState & {
 
 export type RaceFrame = { t: number; d: number; shadowD: number; started: boolean };
 
-type Queued = { trigger: CoachTrigger; prio: 0 | 1 | 2; atT: number; seq: number; auto: boolean };
+type Queued = { trigger: CoachTrigger; prio: 0 | 1 | 2; atT: number; seq: number; auto: boolean; hold: boolean };
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -149,7 +149,7 @@ export class RaceEngine {
     playing: false,
     speed: 300,
     followCoach: true,
-    holdForCoach: true,
+    holdForCoach: false,
     voiceOn: true,
     turns: [],
     log: [],
@@ -287,14 +287,14 @@ export class RaceEngine {
     this.emitNow();
   }
 
-  ask(text: string, auto = false) {
+  ask(text: string, auto = false, hold = true) {
     const q = text.trim();
     if (!q) return;
     if (!auto) {
       this.history.push({ role: "runner", text: q });
       this.pushLog(`You: "${q}"`, "info");
     }
-    this.enqueue({ type: "runner_message", text: q }, 0, auto);
+    this.enqueue({ type: "runner_message", text: q }, 0, auto, hold);
     this.emitNow();
   }
 
@@ -338,7 +338,7 @@ export class RaceEngine {
       "system",
     );
     this.projAt = -Infinity;
-    this.ask("Quick status update, where am I?", true);
+    this.ask("Quick status update, where am I?", true, false);
   }
 
   // Loop ---------------------------------------------------------------------
@@ -405,9 +405,10 @@ export class RaceEngine {
 
   // Coach --------------------------------------------------------------------
 
-  private enqueue(trigger: CoachTrigger, prio: 0 | 1 | 2, auto = false) {
+  private enqueue(trigger: CoachTrigger, prio: 0 | 1 | 2, auto = false, hold = true) {
     if (trigger.type !== "runner_message" && this.queue.some((q) => q.trigger.type === trigger.type && q.trigger.refId === trigger.refId)) return;
-    this.queue.push({ trigger, prio, atT: this.s.t, seq: this.seq++, auto });
+    const latch = hold && prio <= 1 && this.ui.holdForCoach;
+    this.queue.push({ trigger, prio, atT: this.s.t, seq: this.seq++, auto, hold: latch });
     this.queue.sort((a, b) => a.prio - b.prio || a.seq - b.seq);
     while (this.queue.length > 5) {
       let i = -1;
@@ -417,7 +418,7 @@ export class RaceEngine {
       }
       this.queue.splice(i >= 0 ? i : this.queue.length - 1, 1);
     }
-    if (prio <= 1 && this.ui.holdForCoach) this.holding = true;
+    if (latch) this.holding = true;
     void this.pump();
   }
 
@@ -441,7 +442,7 @@ export class RaceEngine {
     }
     this.busy = true;
     const epoch = this.epoch;
-    if (next.prio <= 1 && this.ui.holdForCoach) this.holding = true;
+    if (next.hold && this.ui.holdForCoach) this.holding = true;
 
     let turn: CoachTurn = {
       id: ++this.turnSeq,
@@ -491,6 +492,8 @@ export class RaceEngine {
       this.s.lastCoachT = this.s.t;
       this.ui.line = { id: ++this.lineSeq, text: res.message, tone: res.tone, label: turn.label, engine: res.engine, model: res.model };
       this.ui.speaking = true;
+      // The spoken line used to keep the runner frozen until the audio ended, including after a rewind.
+      this.holding = false;
       this.emitNow();
       const reading = delay(Math.min(9000, res.message.length * 26) + 1200);
       const voice = this.ui.voiceOn && this.speaker ? this.speaker.speak(res.message) : Promise.resolve();

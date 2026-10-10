@@ -98,7 +98,7 @@ export function SimControls({
           {view.held && view.playing && (
             <div className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs text-primary animate-pulse">
               <MessageSquare className="size-3" />
-              <span>Marmo is speaking…</span>
+              <span>Marmo is deciding…</span>
             </div>
           )}
 
@@ -273,7 +273,7 @@ export function SimControls({
                 </div>
               </TooltipTrigger>
               <TooltipContent className="max-w-56 text-xs">
-                Temporarily pauses the race clock while Marmo is speaking so you never miss advice during high-speed simulation.
+                Pauses the clock while Marmo decides. The runner keeps moving once she starts talking.
               </TooltipContent>
             </Tooltip>
 
@@ -292,7 +292,7 @@ export function SimControls({
                 </div>
               </TooltipTrigger>
               <TooltipContent className="max-w-56 text-xs">
-                Speak Marmo's coaching lines aloud using AI text-to-speech.
+                Speak the coaching lines aloud.
               </TooltipContent>
             </Tooltip>
           </div>
