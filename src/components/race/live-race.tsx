@@ -86,18 +86,17 @@ export function LiveRace({
               <PlayerBox view={view} profile={profile} className="sm:w-80" />
             </div>
             {!view.started && (
-              <div className="absolute inset-0 z-10 grid place-items-center bg-[#05081a]/55 p-4 backdrop-blur-[2px]">
-                <div className="rpg-box max-w-md px-6 py-5 text-center">
-                  <div className="font-pixel text-[9px] leading-relaxed text-primary">FRI 25 JUNE 2027 · 23:00 · CORTINA</div>
-                  <h2 className="mt-3 text-2xl font-semibold tracking-tight">The start line is buzzing.</h2>
+              <div className="absolute inset-0 z-10 grid place-items-center bg-black/50 p-4">
+                <div className="rpg-box max-w-sm px-6 py-5 text-center">
+                  <p className="text-xs text-muted-foreground">Friday 25 June 2027, 23:00, Cortina</p>
+                  <h2 className="mt-2 text-xl font-medium tracking-tight">Ready when you are.</h2>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Plan: <span className="text-you">{fmtDuration(plan.timeline.finishSec)}</span>. Your Shadow is aiming for <span className="text-shadow">{fmtDuration(plan.shadow.finishSec)}</span> and
-                    will make every mistake you usually make. Marmo briefs you, then the gun goes.
+                    Plan {fmtDuration(plan.timeline.finishSec)}. Shadow {fmtDuration(plan.shadow.finishSec)}.
                   </p>
-                  <Button size="lg" className="mt-4 h-11 px-6 text-base" onClick={() => engine.start()}>
-                    <Play /> Start the race
+                  <Button className="mt-4" onClick={() => engine.start()}>
+                    <Play /> Start
                   </Button>
-                  <p className="mt-2 text-[11px] text-muted-foreground">Tip: press Space to pause, click the profile to jump.</p>
+                  <p className="mt-3 text-xs text-muted-foreground">Space pauses. Click the profile to jump.</p>
                 </div>
               </div>
             )}

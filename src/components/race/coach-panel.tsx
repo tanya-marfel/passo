@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Brain, Check, Loader2, Mic, MicOff, Send, Sparkles, Swords, Table2, X } from "lucide-react";
+import { useState } from "react";
+import { Check, Loader2, Mic, MicOff, Send, X } from "lucide-react";
 import { cn } from "cn";
 import { course } from "@/lib/course";
 import type { Plan } from "@/lib/plan";
@@ -10,7 +10,6 @@ import { describeAction, type BattleLine } from "@/lib/live";
 import { fmtClock, fmtHm } from "@/lib/format";
 import type { ListenState } from "@/hooks/use-voice";
 import type { PartnerStatus } from "@/hooks/use-partner-status";
-import { MarmoSprite } from "@/components/sprites";
 import { StationBadge } from "@/components/race/station-pin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,21 +18,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const QUICK = ["How am I doing?", "Where's my shadow?", "How far to the next aid?", "My calf is cramping", "Will I make the cut-off?", "I feel empty"];
-
-function Typewriter({ text }: { text: string }) {
-  const [n, setN] = useState(0);
-  useEffect(() => {
-    const iv = setInterval(() => setN((v) => (v >= text.length ? v : v + 2)), 32);
-    return () => clearInterval(iv);
-  }, [text]);
-  const done = n >= text.length;
-  return (
-    <span>
-      {text.slice(0, n)}
-      <span className={cn("ml-0.5 inline-block text-primary", done ? "animate-caret" : "opacity-0")}>▼</span>
-    </span>
-  );
-}
 
 function engineLabel(engine: CoachLine["engine"] | undefined, model?: string) {
   if (engine === "gemini") return model ? model.replace(/^models\//, "") : "Gemini";
@@ -66,7 +50,6 @@ function ThinkingState({ turn }: { turn: CoachTurn }) {
       </div>
       {last ? (
         <div key={steps.length} className="animate-rise">
-          <p className="font-pixel text-[9px] leading-relaxed text-primary">Marmo used {toolMove(last.tool).move}!</p>
           <p className="text-xs text-muted-foreground">{toolMove(last.tool).doing}</p>
         </div>
       ) : (
@@ -82,28 +65,20 @@ export function CoachDialog({ view, idleText }: { view: RaceView; idleText: stri
   const line = view.line;
   const thinking = view.thinking;
   return (
-    <div className="flex items-end gap-3">
-      <div className="relative shrink-0">
-        <MarmoSprite height={76} talking={view.speaking} />
-        <span className="font-pixel absolute -bottom-1 left-1/2 -translate-x-1/2 rounded bg-primary px-1 py-0.5 text-[7px] text-primary-foreground">MARMO</span>
-      </div>
-      <div className="rpg-box min-h-[104px] min-w-0 flex-1 px-3.5 py-3" data-tone={line?.tone} aria-live="polite">
-        {thinking ? (
-          <ThinkingState turn={thinking} />
-        ) : line ? (
-          <>
-            <div className="mb-1 flex items-center gap-2">
-              <span className="font-pixel text-[7px] tracking-wide text-primary uppercase">{line.label}</span>
-              <span className="text-[10px] text-muted-foreground">via {engineLabel(line.engine, line.model)}</span>
-            </div>
-            <p className="text-[15px] leading-snug font-medium">
-              <Typewriter key={line.id} text={line.text} />
-            </p>
-          </>
-        ) : (
-          <p className="text-[15px] leading-snug text-muted-foreground">{idleText}</p>
-        )}
-      </div>
+    <div className="rpg-box min-h-[88px] px-3.5 py-3" data-tone={line?.tone} aria-live="polite">
+      {thinking ? (
+        <ThinkingState turn={thinking} />
+      ) : line ? (
+        <>
+          <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
+            <span>{line.label}</span>
+            <span>{engineLabel(line.engine, line.model)}</span>
+          </div>
+          <p className="text-sm leading-snug">{line.text}</p>
+        </>
+      ) : (
+        <p className="text-sm leading-snug text-muted-foreground">{idleText}</p>
+      )}
     </div>
   );
 }
@@ -204,7 +179,7 @@ function TurnCard({ turn }: { turn: CoachTurn }) {
   return (
     <div className="animate-rise rounded-lg border border-white/10 bg-white/[0.03] p-2.5 text-xs">
       <div className="flex items-center gap-2">
-        {turn.status === "thinking" ? <Loader2 className="size-3.5 animate-spin text-primary" /> : <Brain className="size-3.5 text-primary" />}
+        {turn.status === "thinking" ? <Loader2 className="size-3.5 animate-spin" /> : null}
         <span className="font-medium">{turn.label}</span>
         <span className="ml-auto text-[10px] text-muted-foreground tabular-nums">
           km {(turn.d / 1000).toFixed(1)} · {fmtClock(turn.t)}
@@ -323,39 +298,29 @@ export function CoachPanel({
   className?: string;
 }) {
   const idle = view.started
-    ? "Ask me anything, or keep running. I'll speak up when the course or your body needs it."
-    : `I've studied your runs and the course. Plan: finish in ${fmtHm(plan.timeline.finishSec)}. Press Start when you're ready.`;
+    ? "Ask about pace, the next climb, or how you feel."
+    : `Plan finish ${fmtHm(plan.timeline.finishSec)}. Start when you are ready.`;
   return (
     <div className={cn("flex min-h-0 flex-col gap-3", className)}>
       <CoachDialog view={view} idleText={idle} />
       <AskBar onAsk={(q) => engine.ask(q)} listen={listen} onMic={onMic} micAvailable={micAvailable} />
       <Tabs defaultValue="agent" className="flex min-h-0 flex-1 flex-col">
         <TabsList className="w-full">
-          <TabsTrigger value="agent" className="gap-1 text-xs">
-            <Sparkles className="size-3.5" /> Agent
+          <TabsTrigger value="agent" className="text-xs">
+            Coach
           </TabsTrigger>
-          <TabsTrigger value="log" className="gap-1 text-xs">
-            <Swords className="size-3.5" /> Battle log
+          <TabsTrigger value="log" className="text-xs">
+            Log
           </TabsTrigger>
-          <TabsTrigger value="splits" className="gap-1 text-xs">
-            <Table2 className="size-3.5" /> Splits
+          <TabsTrigger value="splits" className="text-xs">
+            Splits
           </TabsTrigger>
         </TabsList>
         <TabsContent value="agent" className="min-h-0 flex-1">
           <ScrollArea className="h-full max-h-[52vh] pr-2 lg:max-h-none">
             <div className="space-y-2 pb-2">
-              <div className="rounded-lg border border-dashed border-white/10 px-2.5 py-2 text-[11px] text-muted-foreground">
-                {status?.gemini ? (
-                  <>
-                    Marmo runs on <span className="text-foreground">Gemini</span> with function calling: it reads the course, your patterns and your live status, can replan, then decides to speak or stay silent.
-                  </>
-                ) : (
-                  <>
-                    Marmo is running on <span className="text-foreground">offline rules</span> using the same tools. Add a <code className="text-foreground">GEMINI_API_KEY</code> to let Gemini drive the tool calls.
-                  </>
-                )}
-              </div>
-              {view.turns.length === 0 && <div className="py-6 text-center text-xs text-muted-foreground">Agent decisions and tool calls appear here.</div>}
+              <p className="px-1 text-[11px] text-muted-foreground">{status?.gemini ? "Decisions use Gemini." : "Decisions use the built-in rules."}</p>
+              {view.turns.length === 0 && <div className="py-6 text-center text-xs text-muted-foreground">Decisions show up here.</div>}
               {view.turns.map((t) => (
                 <TurnCard key={t.id} turn={t} />
               ))}

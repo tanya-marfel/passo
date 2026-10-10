@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { AlertTriangle, ArrowRight, Mountain, Play, RotateCcw, Timer } from "lucide-react";
+import { Play, RotateCcw } from "lucide-react";
 import { cn } from "cn";
 import { course } from "@/lib/course";
 import { buildPlan, type GoalId, type Plan } from "@/lib/plan";
@@ -9,7 +9,6 @@ import type { RunnerProfile, TrainerStats } from "@/lib/profile";
 import { fmtClock, fmtDuration, fmtHm } from "@/lib/format";
 import type { PartnerStatus } from "@/hooks/use-partner-status";
 import { AppHeader } from "@/components/app-header";
-import { BadgeIcon, RunnerSprite, ShadowSprite } from "@/components/sprites";
 import { ElevationProfile } from "@/components/race/elevation-profile";
 import { StationBadge } from "@/components/race/station-pin";
 import { Badge } from "@/components/ui/badge";
@@ -17,13 +16,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
-const STATS: [keyof TrainerStats, string, string][] = [
-  ["speed", "SPEED", "#38bdf8"],
-  ["climb", "CLIMB", "#fbbf24"],
-  ["descent", "DESCENT", "#a78bfa"],
-  ["stamina", "STAMINA", "#34d399"],
-  ["resilience", "GRIT", "#fb7185"],
-  ["night", "NIGHT", "#818cf8"],
+const STATS: [keyof TrainerStats, string][] = [
+  ["speed", "Speed"],
+  ["climb", "Climb"],
+  ["descent", "Descent"],
+  ["stamina", "Stamina"],
+  ["resilience", "Grit"],
+  ["night", "Night"],
 ];
 
 const GOALS: { id: GoalId; label: string; blurb: string }[] = [
@@ -34,14 +33,14 @@ const GOALS: { id: GoalId; label: string; blurb: string }[] = [
 
 const fmtDate = (ms: number) => new Date(ms).toLocaleDateString("en-GB", { month: "short", year: "numeric" });
 
-function StatBar({ label, value, color }: { label: string; value: number; color: string }) {
+function StatBar({ label, value }: { label: string; value: number }) {
   return (
-    <div className="grid grid-cols-[70px_1fr_28px] items-center gap-2">
-      <span className="font-pixel text-[7px] text-muted-foreground">{label}</span>
-      <div className="h-2 overflow-hidden rounded-full bg-black/40">
-        <div className="h-full rounded-full" style={{ width: `${value}%`, backgroundColor: color }} />
+    <div className="grid grid-cols-[4.5rem_1fr_1.75rem] items-center gap-3">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <div className="h-px bg-white/15">
+        <div className="h-px bg-foreground/70" style={{ width: `${value}%` }} />
       </div>
-      <span className="text-right text-xs tabular-nums">{value}</span>
+      <span className="text-right text-xs text-muted-foreground tabular-nums">{value}</span>
     </div>
   );
 }
@@ -51,20 +50,15 @@ function TrainerCard({ profile, onRename }: { profile: RunnerProfile; onRename: 
   const longest = [...profile.activities].sort((a, b) => b.hours - a.hours).slice(0, 4);
   return (
     <Card className="gap-4">
-      <CardHeader className="flex flex-row items-center gap-4">
-        <div className="grid size-20 shrink-0 place-items-center rounded-xl bg-gradient-to-b from-you/25 to-transparent ring-1 ring-you/30">
-          <RunnerSprite height={60} className="animate-bob" />
+      <CardHeader>
+        <div className="text-xs text-muted-foreground">You</div>
+        <div className="mt-2 flex items-center gap-3">
+          <Input name="runner-name" autoComplete="nickname" value={profile.name} onChange={(e) => onRename(e.target.value)} className="h-8 max-w-52 text-base" aria-label="Your name" maxLength={20} />
+          <span className="text-sm text-muted-foreground">Level {profile.level}</span>
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="font-pixel text-[8px] text-muted-foreground">TRAINER CARD</div>
-          <div className="mt-1.5 flex items-center gap-2">
-            <Input name="runner-name" autoComplete="nickname" value={profile.name} onChange={(e) => onRename(e.target.value)} className="h-8 max-w-52 text-base font-semibold" aria-label="Your name" maxLength={20} />
-            <span className="font-pixel text-[9px] text-primary">Lv{profile.level}</span>
-          </div>
-          <div className="mt-1.5 text-sm">
-            <span className="font-medium text-gym">{profile.type.name}</span> <span className="text-muted-foreground">· {profile.type.blurb}</span>
-          </div>
-        </div>
+        <p className="text-sm text-muted-foreground">
+          {profile.type.name}. {profile.type.blurb}
+        </p>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="text-xs text-muted-foreground">
@@ -72,16 +66,13 @@ function TrainerCard({ profile, onRename }: { profile: RunnerProfile; onRename: 
           {Math.round(t.km).toLocaleString("en-GB")} km · {Math.round(t.gain).toLocaleString("en-GB")} m up · {Math.round(t.hours)} h
         </div>
         <div className="space-y-1.5">
-          {STATS.map(([k, label, color]) => (
-            <StatBar key={k} label={label} value={profile.stats[k]} color={color} />
+          {STATS.map(([k, label]) => (
+            <StatBar key={k} label={label} value={profile.stats[k]} />
           ))}
         </div>
-        <ul className="grid gap-1 text-sm sm:grid-cols-2">
+        <ul className="space-y-1 text-sm text-muted-foreground">
           {profile.highlights.map((h) => (
-            <li key={h} className="flex gap-2">
-              <span className="text-primary">▸</span>
-              {h}
-            </li>
+            <li key={h}>{h}</li>
           ))}
         </ul>
         {longest.length > 0 && (
@@ -110,36 +101,22 @@ function TrainerCard({ profile, onRename }: { profile: RunnerProfile; onRename: 
 function ShadowMoves({ profile }: { profile: RunnerProfile }) {
   return (
     <Card className="gap-3">
-      <CardHeader className="flex flex-row items-center gap-3">
-        <ShadowSprite height={48} />
-        <div>
-          <CardTitle className="font-pixel text-[10px] leading-relaxed text-shadow">YOUR SHADOW&apos;S MOVES</CardTitle>
-          <p className="mt-1 text-sm text-muted-foreground">Your Shadow is you on a bad day: same legs, same habits. Marmo has a counter for each move.</p>
-        </div>
+      <CardHeader>
+        <CardTitle>Habits</CardTitle>
+        <p className="text-sm text-muted-foreground">The shadow runs these the way your history usually does.</p>
       </CardHeader>
-      <CardContent className="space-y-2.5">
-        {profile.patterns.length === 0 && <p className="text-sm text-muted-foreground">No clear weaknesses found. Your Shadow will just run your plan a little worse.</p>}
+      <CardContent className="space-y-4">
+        {profile.patterns.length === 0 && <p className="text-sm text-muted-foreground">No clear pattern. The shadow follows the plan, a little slower.</p>}
         {profile.patterns.map((p) => (
-          <div key={p.id} className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-pixel text-[9px] text-shadow">{p.move.toUpperCase()}</span>
+          <div key={p.id} className="border-t border-white/8 pt-3 first:border-0 first:pt-0">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
               <span className="text-sm font-medium">{p.title}</span>
-              <Badge variant={p.confidence === "data" ? "secondary" : "outline"} className="ml-auto text-[10px]">
+              <Badge variant="outline" className="ml-auto text-[10px] font-normal">
                 {p.confidence === "data" ? "From your runs" : "Assumption"}
               </Badge>
             </div>
-            <div className="mt-2 flex items-center gap-2">
-              <span className="text-[10px] text-muted-foreground">Power</span>
-              <div className="flex gap-0.5">
-                {Array.from({ length: 5 }, (_, i) => (
-                  <span key={i} className={cn("h-2 w-4 rounded-sm", i < Math.round(p.severity * 5) ? "bg-shadow" : "bg-white/10")} />
-                ))}
-              </div>
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">{p.evidence}</p>
-            <p className="mt-1.5 text-sm">
-              <span className="font-medium text-primary">Marmo&apos;s counter:</span> {p.advice}
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">{p.evidence}</p>
+            <p className="mt-1 text-sm">{p.advice}</p>
           </div>
         ))}
       </CardContent>
@@ -157,8 +134,7 @@ function RaceCard({ profile, plan, goal, onGoal, onStart }: { profile: RunnerPro
   return (
     <Card className="gap-4">
       <CardHeader>
-        <div className="font-pixel text-[8px] text-muted-foreground">YOUR NEXT RACE</div>
-        <CardTitle className="mt-1 text-2xl font-semibold tracking-tight">{course.name}</CardTitle>
+        <CardTitle className="text-xl font-medium tracking-tight">{course.name}</CardTitle>
         <p className="text-sm text-muted-foreground">
           {course.startLocal} · {course.location} · {course.totalKm} km · {course.trackGainM.toLocaleString("en-GB")} m up (GPS) · 30 h limit
         </p>
@@ -174,7 +150,7 @@ function RaceCard({ profile, plan, goal, onGoal, onStart }: { profile: RunnerPro
               onClick={() => onGoal(g.id)}
               className={cn(
                 "rounded-lg border px-3 py-2 text-left transition",
-                goal === g.id ? "border-primary bg-primary/10" : "border-white/10 bg-white/[0.02] hover:border-white/25",
+                goal === g.id ? "border-foreground/40 bg-white/[0.04]" : "border-white/10 hover:border-white/20",
               )}
             >
               <div className="text-xs text-muted-foreground">{g.label}</div>
@@ -205,19 +181,7 @@ function RaceCard({ profile, plan, goal, onGoal, onStart }: { profile: RunnerPro
 
         <div className="rounded-lg border border-white/8 bg-black/20 px-1 pt-1">
           <ElevationProfile plan={plan} height={150} />
-          <div className="flex flex-wrap items-center gap-3 px-2 pb-2 text-[11px] text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <span className="size-2.5 rounded-sm bg-gym/60" /> Gyms (big climbs)
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="size-0 border-x-4 border-t-[6px] border-x-transparent border-t-cutoff" /> Cut-off
-            </span>
-            <span className="ml-auto flex gap-1">
-              {course.climbs.map((c) => (
-                <BadgeIcon key={c.id} climbId={c.id} size={16} />
-              ))}
-            </span>
-          </div>
+          <p className="px-2 pb-2 text-xs text-muted-foreground">Bars mark the long climbs. Triangles mark cut-offs.</p>
         </div>
 
         <div className="max-h-72 overflow-auto rounded-lg border border-white/8">
@@ -260,24 +224,18 @@ function RaceCard({ profile, plan, goal, onGoal, onStart }: { profile: RunnerPro
         </div>
 
         {plan.warnings.length > 0 && (
-          <div className="space-y-1 rounded-lg border border-amber-300/30 bg-amber-300/10 p-3 text-sm text-amber-100">
+          <div className="space-y-1 text-sm text-amber-200/90">
             {plan.warnings.map((w) => (
-              <p key={w} className="flex gap-2">
-                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                {w}
-              </p>
+              <p key={w}>{w}</p>
             ))}
           </div>
         )}
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Button size="lg" className="h-11 px-5 text-base" onClick={onStart}>
-            <Play /> Start live race <ArrowRight />
+          <Button onClick={onStart}>
+            <Play /> Start the race
           </Button>
-          <p className="text-xs text-muted-foreground">
-            <Timer className="mr-1 inline size-3.5" />
-            Simulated race clock from Fri 23:00. Jump anywhere, inject a cramp or a storm, and talk to Marmo.
-          </p>
+          <p className="text-xs text-muted-foreground">Friday 23:00. Pause, jump the course, or talk to Marmo.</p>
         </div>
       </CardContent>
     </Card>
@@ -317,9 +275,7 @@ export function ProfileScreen({
         </div>
         <div className="space-y-5 lg:sticky lg:top-4 lg:self-start">
           <RaceCard profile={profile} plan={plan} goal={goal} onGoal={onGoal} onStart={onStart} />
-          <p className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
-            <Mountain className="size-3.5" /> {course.source.note}
-          </p>
+          <p className="px-1 text-xs text-muted-foreground">{course.source.note}</p>
         </div>
       </main>
       <div className="sticky bottom-0 z-20 flex items-center gap-3 border-t border-white/10 bg-background/90 px-4 py-3 backdrop-blur lg:hidden">
@@ -330,7 +286,7 @@ export function ProfileScreen({
           </div>
         </div>
         <Button onClick={onStart}>
-          <Play /> Start live race
+          <Play /> Start
         </Button>
       </div>
     </div>

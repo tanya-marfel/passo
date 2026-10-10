@@ -6,7 +6,7 @@ import type { Plan } from "@/lib/plan";
 import type { RunnerProfile } from "@/lib/profile";
 import type { RaceView } from "@/lib/engine";
 import { fmtDuration, fmtHm } from "@/lib/format";
-import { BadgeIcon, MarmoSprite } from "@/components/sprites";
+import { BadgeIcon } from "@/components/sprites";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -36,10 +36,11 @@ export function FinishDialog({
   return (
     <Dialog open={view.showFinish} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-lg">
-        <DialogHeader className="items-center text-center">
-          <MarmoSprite height={84} talking />
-          <DialogTitle className="font-pixel mt-2 text-sm leading-relaxed text-primary">LAVAREDO FINISHER!</DialogTitle>
-          <DialogDescription>Cortina d&apos;Ampezzo · 119.5 km · {fmtHm(view.t)} on your feet</DialogDescription>
+        <DialogHeader className="text-center sm:text-center">
+          <DialogTitle className="text-lg font-medium">Finished</DialogTitle>
+          <DialogDescription>
+            Cortina · {course.totalKm} km · {fmtHm(view.t)}
+          </DialogDescription>
         </DialogHeader>
         <div className="text-center">
           <div className="text-5xl font-semibold tracking-tight tabular-nums">{fmtDuration(view.t)}</div>
@@ -59,7 +60,9 @@ export function FinishDialog({
           </div>
         </div>
         <div>
-          <div className="font-pixel mb-2 text-[8px] text-muted-foreground">BADGES {view.badges.length}/{course.climbs.length}</div>
+          <div className="mb-2 text-xs text-muted-foreground">
+            Climbs {view.badges.length}/{course.climbs.length}
+          </div>
           <div className="grid grid-cols-8 gap-1.5">
             {course.climbs.map((c, i) => {
               const won = view.badges.some((b) => b.climbId === c.id);
@@ -74,7 +77,7 @@ export function FinishDialog({
         </div>
         {stopped.length > 0 && (
           <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-            <div className="font-pixel mb-1.5 text-[8px] text-shadow">MISTAKES MARMO STOPPED</div>
+            <div className="mb-1.5 text-xs text-muted-foreground">What held</div>
             <ul className="space-y-1 text-sm">
               {stopped.map((s) => (
                 <li key={s} className="flex gap-2">

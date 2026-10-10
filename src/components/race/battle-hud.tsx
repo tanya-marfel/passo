@@ -6,27 +6,26 @@ import type { RunnerProfile } from "@/lib/profile";
 import type { RaceView } from "@/lib/engine";
 import type { StatusId } from "@/lib/live";
 import { fmtClock, fmtDuration, fmtHm } from "@/lib/format";
-import { ShadowSprite, RunnerSprite } from "@/components/sprites";
 import { StationBadge } from "@/components/race/station-pin";
 
 const STATUS: Record<StatusId, { label: string; className: string }> = {
-  cramp: { label: "CRAMP", className: "bg-red-500/90 text-white" },
-  storm: { label: "STORM", className: "bg-sky-500/90 text-white" },
-  drowsy: { label: "DROWSY", className: "bg-indigo-500/90 text-white" },
-  bonk: { label: "BONK", className: "bg-red-600 text-white" },
-  caffeine: { label: "CAFFEINE", className: "bg-amber-400 text-slate-950" },
-  resting: { label: "AT AID", className: "bg-slate-200 text-slate-900" },
+  cramp: { label: "Cramp", className: "text-red-300" },
+  storm: { label: "Storm", className: "text-sky-300" },
+  drowsy: { label: "Drowsy", className: "text-indigo-200" },
+  bonk: { label: "Empty", className: "text-red-300" },
+  caffeine: { label: "Caffeine", className: "text-amber-200" },
+  resting: { label: "At aid", className: "text-foreground" },
 };
 
 export function hpColor(hp: number) {
-  return hp > 50 ? "#34d399" : hp > 25 ? "#fbbf24" : "#f87171";
+  return hp > 50 ? "oklch(0.92 0.008 95)" : hp > 25 ? "oklch(0.78 0.08 75)" : "oklch(0.66 0.11 32)";
 }
 
 export function HpBar({ hp, className }: { hp: number; className?: string }) {
   return (
     <div className={cn("flex items-center gap-1.5", className)}>
-      <span className="font-pixel text-[8px] text-amber-300">HP</span>
-      <div className="hp-track h-3 flex-1">
+      <span className="text-[11px] text-muted-foreground">Energy</span>
+      <div className="hp-track h-1 flex-1">
         <div className="hp-fill" style={{ width: `${Math.max(0, Math.min(100, hp))}%`, backgroundColor: hpColor(hp) }} />
       </div>
     </div>
@@ -35,7 +34,7 @@ export function HpBar({ hp, className }: { hp: number; className?: string }) {
 
 function trainerName(profile: RunnerProfile) {
   const n = profile.name.trim();
-  return !n || n.toLowerCase() === "you" ? "YOU" : n.toUpperCase().slice(0, 12);
+  return !n || n.toLowerCase() === "you" ? "You" : n.slice(0, 18);
 }
 
 function gapText(gapSec: number) {
@@ -49,12 +48,10 @@ export function ShadowBox({ view, profile, plan, className }: { view: RaceView; 
   const move = [...plan.shadowMoves].reverse().find((m) => m.km <= km && km - m.km < 4);
   const ahead = view.shadowGapSec < -60;
   return (
-    <div className={cn("hud-box flex items-center gap-3 px-3 py-2", className)}>
-      <ShadowSprite height={40} />
-      <div className="min-w-0 flex-1">
+    <div className={cn("hud-box px-3 py-2", className)}>
+      <div className="min-w-0">
         <div className="flex items-baseline justify-between gap-3">
-          <span className="font-pixel truncate text-[9px] text-shadow">SHADOW {trainerName(profile)}</span>
-          <span className="font-pixel text-[8px] text-muted-foreground">Lv{profile.level}</span>
+          <span className="truncate text-xs text-shadow">Shadow · {trainerName(profile)}</span>
         </div>
         <div className={cn("mt-1 text-sm font-semibold tabular-nums", ahead ? "text-shadow" : "text-you")}>
           {view.started ? gapText(view.shadowGapSec) : "Waiting at the start"}
@@ -79,12 +76,10 @@ export function PlayerBox({ view, profile, className }: { view: RaceView; profil
   const ahead = view.planDeltaSec < -60;
   return (
     <div className={cn("hud-box px-3 py-2", className)}>
-      <div className="flex items-center gap-3">
-        <RunnerSprite height={40} />
-        <div className="min-w-0 flex-1">
+      <div>
+        <div className="min-w-0">
           <div className="flex items-baseline justify-between gap-3">
-            <span className="font-pixel truncate text-[9px] text-you">{trainerName(profile)}</span>
-            <span className="font-pixel text-[8px] text-muted-foreground">Lv{profile.level}</span>
+            <span className="truncate text-xs text-you">{trainerName(profile)}</span>
           </div>
           <HpBar hp={view.hp} className="mt-1.5" />
           <div className="mt-1 flex items-center justify-between text-[11px] tabular-nums text-muted-foreground">
@@ -98,9 +93,9 @@ export function PlayerBox({ view, profile, className }: { view: RaceView; profil
         </div>
       </div>
       <div className="mt-1.5 flex flex-wrap items-center gap-1">
-        {climb && <span className="font-pixel rounded bg-gym px-1.5 py-0.5 text-[7px] text-slate-950">GYM: {climb.name.toUpperCase()}</span>}
+        {climb && <span className="text-[11px] text-muted-foreground">{climb.name}</span>}
         {view.status.map((s) => (
-          <span key={s} className={cn("font-pixel rounded px-1.5 py-0.5 text-[7px]", STATUS[s].className)}>
+          <span key={s} className={cn("text-[11px]", STATUS[s].className)}>
             {STATUS[s].label}
           </span>
         ))}

@@ -107,8 +107,8 @@ export function ElevationProfile({ plan, runnerD, shadowD, planD, earned = [], o
         <svg width={geo.w} height={geo.h} className="absolute inset-0 overflow-visible" role="img" aria-label="Lavaredo 120K elevation profile">
           <defs>
             <linearGradient id="ep-area" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="oklch(0.6 0.05 260)" stopOpacity="0.55" />
-              <stop offset="100%" stopColor="oklch(0.4 0.04 260)" stopOpacity="0.08" />
+              <stop offset="0%" stopColor="oklch(0.7 0.01 90)" stopOpacity="0.28" />
+              <stop offset="100%" stopColor="oklch(0.7 0.01 90)" stopOpacity="0.02" />
             </linearGradient>
             <linearGradient id="ep-done" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="var(--you)" stopOpacity="0.75" />
@@ -136,7 +136,7 @@ export function ElevationProfile({ plan, runnerD, shadowD, planD, earned = [], o
             return (
               <g key={c.id}>
                 <rect x={x1} y={PAD.t - 4} width={Math.max(2, x2 - x1)} height={geo.base - PAD.t + 4} fill={light} fillOpacity={won ? 0.16 : 0.07} />
-                <text x={(x1 + x2) / 2} y={PAD.t - 9} textAnchor="middle" className="font-pixel text-[7px]" fill={won ? light : "oklch(0.8 0.03 260)"}>
+                <text x={(x1 + x2) / 2} y={PAD.t - 9} textAnchor="middle" className="text-[9px]" fill={won ? light : "oklch(0.7 0.01 80)"}>
                   {geo.w >= 560 ? `G${i + 1}` : i + 1}
                 </text>
               </g>
@@ -144,7 +144,7 @@ export function ElevationProfile({ plan, runnerD, shadowD, planD, earned = [], o
           })}
 
           <path d={geo.area} fill="url(#ep-area)" />
-          <path d={geo.line} fill="none" stroke="oklch(0.85 0.03 260)" strokeOpacity="0.7" strokeWidth="1.25" />
+          <path d={geo.line} fill="none" stroke="oklch(0.85 0.01 90)" strokeOpacity="0.55" strokeWidth="1.25" />
           {runnerX !== null && (
             <g clipPath="url(#ep-done-clip)">
               <path d={geo.area} fill="url(#ep-done)" />
@@ -173,16 +173,16 @@ export function ElevationProfile({ plan, runnerD, shadowD, planD, earned = [], o
           {planD !== undefined && planD > 0 && (
             <g>
               <line x1={geo.x(planD)} x2={geo.x(planD)} y1={PAD.t} y2={geo.base} stroke="white" strokeOpacity="0.55" strokeDasharray="3 3" />
-              <text x={geo.x(planD)} y={PAD.t + 8} textAnchor="middle" className="font-pixel text-[6px]" fill="white" fillOpacity="0.7">
-                PLAN
+              <text x={geo.x(planD)} y={PAD.t + 10} textAnchor="middle" className="text-[9px]" fill="white" fillOpacity="0.65">
+                Plan
               </text>
             </g>
           )}
           {shadowD !== undefined && (
             <g>
-              <circle cx={geo.x(shadowD)} cy={geo.y(eleAt(shadowD))} r={5.5} fill="var(--shadow-rival)" stroke="#1a0b2e" strokeWidth="2" />
-              <text x={geo.x(shadowD)} y={geo.y(eleAt(shadowD)) - 9} textAnchor="middle" className="font-pixel text-[6px]" fill="var(--shadow-rival)">
-                SHADOW
+              <circle cx={geo.x(shadowD)} cy={geo.y(eleAt(shadowD))} r={4} fill="var(--shadow-rival)" />
+              <text x={geo.x(shadowD)} y={geo.y(eleAt(shadowD)) - 8} textAnchor="middle" className="text-[9px]" fill="var(--shadow-rival)">
+                Shadow
               </text>
             </g>
           )}

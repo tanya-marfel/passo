@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { FileUp, Loader2, Lock, Sparkles, Upload, Watch } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { cn } from "cn";
 import { buildProfile, type RunnerProfile } from "@/lib/profile";
 import { sampleActivities } from "@/lib/sample";
@@ -11,16 +11,8 @@ import { importFiles, type Activity } from "@/lib/garmin";
 import { clearSearchFlags } from "@/lib/search-flag";
 import type { PartnerStatus } from "@/hooks/use-partner-status";
 import { AppHeader } from "@/components/app-header";
-import { MarmoSprite, RunnerSprite, ShadowSprite } from "@/components/sprites";
 import { ElevationProfile } from "@/components/race/elevation-profile";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-
-const STEPS = [
-  { title: "Drop your runs", body: "A Garmin Connect ZIP, or FIT, GPX and TCX files. Rival Run reads them in your browser and never uploads the files." },
-  { title: "Meet your Shadow", body: "A rival built from your habits: same legs, same mistakes. It runs Lavaredo the way the old you would." },
-  { title: "Race with Marmo", body: "A live AI coach on a 3D course. It watches every km, calls the climbs and replans when things go wrong." },
-];
 
 const nextTick = () => new Promise((r) => setTimeout(r, 30));
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -70,7 +62,7 @@ export function ImportScreen({
           if (!res.ok) throw new Error(body?.error || "Couldn't read the Garmin session.");
           const activities = body?.activities ?? [];
           if (activities.length) {
-            setBusy(`Marmo is studying ${activities.length} run${activities.length > 1 ? "s" : ""}…`);
+            setBusy(`Reading ${activities.length} run${activities.length > 1 ? "s" : ""}…`);
             await nextTick();
             const profile = buildProfile(activities, { source: "garmin-connect" });
             const skipped = body?.skipped?.length ?? 0;
@@ -116,7 +108,7 @@ export function ImportScreen({
         setError("No runs with GPS and timestamps were found in those files. Try a Garmin Connect ZIP, or FIT, GPX or TCX exports.");
         return;
       }
-      setBusy(`Marmo is studying ${res.activities.length} run${res.activities.length > 1 ? "s" : ""}…`);
+      setBusy(`Reading ${res.activities.length} run${res.activities.length > 1 ? "s" : ""}…`);
       await nextTick();
       const profile = buildProfile(res.activities, { source: "garmin" });
       if (res.skipped.length) toast.info(`Analysed ${profile.activityCount} runs, skipped ${res.skipped.length} file${res.skipped.length > 1 ? "s" : ""}.`);
@@ -145,142 +137,92 @@ export function ImportScreen({
   return (
     <div className="flex min-h-dvh flex-col">
       <AppHeader status={status} />
-      <main className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-10 px-4 py-8 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:py-12">
-        <section>
-          <div className="font-pixel text-[9px] leading-relaxed text-primary">{course.name.toUpperCase()} · JUNE 2027</div>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-balance sm:text-5xl">Race the runner you used to be.</h1>
-          <p className="mt-4 max-w-xl text-base text-pretty text-muted-foreground sm:text-lg">
-            Rival Run reads your Garmin history, finds the mistakes you keep making and turns them into your <span className="text-shadow">Shadow</span>: a rival that runs
-            Lavaredo exactly like the old you. <span className="text-primary">Marmo</span>, your AI trail coach, calls the race live, kilometre by kilometre.
-          </p>
+      <main className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center px-5 py-12 sm:px-6">
+        <p className="text-sm text-muted-foreground">{course.name}</p>
+        <h1 className="mt-2 text-3xl font-medium tracking-tight text-balance">Race the runner you used to be.</h1>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          A Garmin history becomes a shadow that runs this course the way you usually do. Marmo calls the climbs as you go.
+        </p>
 
-          <Card
-            className={cn("mt-7 border-2 border-dashed transition", dragging ? "border-primary bg-primary/5" : "border-white/15")}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragging(true);
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragging(false);
-              void handleFiles(e.dataTransfer.files);
-            }}
-          >
-            <CardContent className="flex flex-col items-center gap-3 py-7 text-center">
-              {busy ? (
-                <>
-                  <Loader2 className="size-8 animate-spin text-primary" />
-                  <p className="font-medium">{busy}</p>
-                </>
-              ) : (
-                <>
-                  <div className="grid size-12 place-items-center rounded-full bg-primary/15 text-primary">
-                    <Upload className="size-6" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Drop your Garmin export here</p>
-                    <p className="mt-1 text-sm text-muted-foreground">A Connect ZIP, or FIT, GPX and TCX files. Your longest runs tell Marmo the most.</p>
-                  </div>
-                  <div className="flex flex-wrap justify-center gap-2">
-                    <Button size="lg" onClick={() => inputRef.current?.click()}>
-                      <FileUp /> Choose files
-                    </Button>
-                    <Button size="lg" variant="secondary" onClick={() => void loadSample()}>
-                      <Sparkles /> Try the sample runner
-                    </Button>
-                    <Button size="lg" variant="outline" asChild>
-                      <a href="/api/garmin/connect">
-                        <Watch /> Sign in with Garmin
-                      </a>
-                    </Button>
-                  </div>
-                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Lock className="size-3" /> Files are read in your browser. Only a compact summary goes to the coach.
-                  </p>
-                </>
-              )}
-              <input
-                ref={inputRef}
-                id="garmin-files"
-                type="file"
-                name="garmin-files"
-                multiple
-                accept=".fit,.gpx,.tcx,.zip,application/zip,application/gpx+xml"
-                className="sr-only"
-                onChange={(e) => {
-                  if (e.target.files) void handleFiles(e.target.files);
-                  e.target.value = "";
-                }}
-              />
-            </CardContent>
-          </Card>
-
-          {(error || returnedError) && (
-            <p className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-red-200">{error || returnedError}</p>
+        <div
+          className={cn("mt-8 rounded-lg border px-5 py-8 text-center transition-colors", dragging ? "border-foreground/30 bg-white/[0.03]" : "border-white/10")}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragging(false);
+            void handleFiles(e.dataTransfer.files);
+          }}
+        >
+          {busy ? (
+            <p className="flex items-center justify-center gap-2 text-sm">
+              <Loader2 className="size-4 animate-spin" />
+              {busy}
+            </p>
+          ) : (
+            <>
+              <p className="text-sm">Drop a Garmin export</p>
+              <p className="mt-1 text-sm text-muted-foreground">ZIP, FIT, GPX, or TCX. Read in the browser.</p>
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+                <Button onClick={() => inputRef.current?.click()}>Choose files</Button>
+                <button type="button" className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline" onClick={() => void loadSample()}>
+                  Sample runner
+                </button>
+                <a href="/api/garmin/connect" className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+                  Sign in with Garmin
+                </a>
+              </div>
+            </>
           )}
-          {skipped.length > 0 && (
-            <details className="mt-2 text-xs text-muted-foreground">
-              <summary className="cursor-pointer">
-                {skipped.length} file{skipped.length > 1 ? "s" : ""} skipped
-              </summary>
-              <ul className="mt-1 space-y-0.5">
-                {skipped.slice(0, 12).map((s) => (
-                  <li key={s.file}>
-                    {s.file}: {s.reason}
-                  </li>
-                ))}
-              </ul>
-            </details>
-          )}
+          <input
+            ref={inputRef}
+            id="garmin-files"
+            type="file"
+            name="garmin-files"
+            multiple
+            accept=".fit,.gpx,.tcx,.zip,application/zip,application/gpx+xml"
+            className="sr-only"
+            onChange={(e) => {
+              if (e.target.files) void handleFiles(e.target.files);
+              e.target.value = "";
+            }}
+          />
+        </div>
 
-          <details className="mt-4 text-sm text-muted-foreground">
-            <summary className="cursor-pointer text-foreground/80">How do I export from Garmin Connect?</summary>
-            <ol className="mt-2 list-decimal space-y-1 pl-5">
-              <li>Open a run on connect.garmin.com, click the gear icon and choose Export Original (a ZIP with the FIT file) or Export to GPX/TCX.</li>
-              <li>For your whole history: Account settings, Data Management, Export Your Data. Drop the ZIP as is.</li>
-              <li>Your longest runs and races, especially with real climbs, tell Marmo the most.</li>
-            </ol>
+        {(error || returnedError) && <p className="mt-3 text-sm text-red-300">{error || returnedError}</p>}
+        {skipped.length > 0 && (
+          <details className="mt-2 text-xs text-muted-foreground">
+            <summary className="cursor-pointer">
+              {skipped.length} file{skipped.length > 1 ? "s" : ""} skipped
+            </summary>
+            <ul className="mt-1 space-y-0.5">
+              {skipped.slice(0, 12).map((s) => (
+                <li key={s.file}>
+                  {s.file}: {s.reason}
+                </li>
+              ))}
+            </ul>
           </details>
-        </section>
+        )}
 
-        <section className="relative">
-          <div className="rpg-box overflow-hidden p-5">
-            <div className="font-pixel text-center text-[9px] text-muted-foreground">A WILD SHADOW APPEARED!</div>
-            <div className="mt-5 flex items-end justify-around">
-              <div className="flex flex-col items-center gap-2">
-                <RunnerSprite height={92} className="animate-bob" />
-                <span className="font-pixel text-[9px] text-you">YOU</span>
-              </div>
-              <span className="font-pixel mb-10 text-2xl text-primary">VS</span>
-              <div className="flex flex-col items-center gap-2">
-                <ShadowSprite height={92} />
-                <span className="font-pixel text-[9px] text-shadow">SHADOW</span>
-              </div>
-            </div>
-            <ElevationProfile height={110} className="mt-4 opacity-90" />
-            <div className="mt-2 flex items-start gap-3">
-              <MarmoSprite height={64} />
-              <div className="rpg-box flex-1 px-3 py-2 text-sm">
-                119.5 km, 5,000 m of climbing and 8 gyms between Cortina and the Tre Cime. Drop your Garmin export and I&apos;ll show you exactly where your Shadow will beat you.
-              </div>
-            </div>
-          </div>
-        </section>
+        <details className="mt-4 text-sm text-muted-foreground">
+          <summary className="cursor-pointer">Export from Garmin Connect</summary>
+          <ol className="mt-2 list-decimal space-y-1 pl-5">
+            <li>Open a run, use the gear menu, and export the original ZIP or a GPX/TCX file.</li>
+            <li>For a full history: account settings, data management, export your data. Drop the ZIP as is.</li>
+          </ol>
+        </details>
+
+        <div className="mt-10">
+          <ElevationProfile height={120} />
+          <p className="mt-1 text-xs text-muted-foreground tabular-nums">
+            {course.totalKm} km · {course.trackGainM.toLocaleString("en-GB")} m · {course.location}
+          </p>
+        </div>
       </main>
-
-      <section className="mx-auto grid w-full max-w-6xl gap-4 px-4 pb-10 sm:grid-cols-3 sm:px-6">
-        {STEPS.map((s, i) => (
-          <div key={s.title} className="rounded-xl border border-white/8 bg-card/60 p-4">
-            <div className="font-pixel text-[9px] text-primary">STEP {i + 1}</div>
-            <div className="mt-2 font-medium">{s.title}</div>
-            <p className="mt-1 text-sm text-muted-foreground">{s.body}</p>
-          </div>
-        ))}
-      </section>
-      <footer className="border-t border-white/8 px-4 py-4 text-center text-xs text-muted-foreground sm:px-6">
-        Coach brain by Google DeepMind Gemini · Voice by Gradium · Built with Entire checkpoints · Course: official Lavaredo 120K GPX · Original creatures and art
-      </footer>
     </div>
   );
 }
