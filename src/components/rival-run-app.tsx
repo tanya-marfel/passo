@@ -18,24 +18,24 @@ export function PassoApp() {
   const garminFlag = useSearchFlag("garmin");
   const garminReason = useSearchFlag("reason");
   const [racing, setRacing] = useState(false);
-  // A saved race must not skip the prompt. The field stays up until this visit submits one.
-  const [picked, setPicked] = useState(false);
-  const active = picked ? bindRace(race) : null;
+  // The prompt stays until both pieces exist. A stored route alone must not skip typing,
+  // and a stored history alone must not sit on "runs loaded" once the route is saved too.
+  const active = profile && race ? bindRace(race) : null;
   const plan = useMemo(() => (profile && active ? buildPlan(profile, goal) : null), [profile, goal, active]);
 
-  if (!picked || garminFlag || !profile || !race || !plan) {
+  if (garminFlag || !profile || !race || !plan) {
     return (
       <ImportScreen
         status={status}
         garminFlag={garminFlag}
         garminReason={garminReason}
         runs={profile?.activityCount ?? null}
-        raceLabel={picked ? (race?.label ?? null) : null}
+        raceLabel={race?.label ?? null}
         onProfile={saveProfile}
+        onClearRuns={clearProfile}
         onGarminDone={finishGarminReturn}
         onRace={(choice, label) => {
           saveRace({ ...choice, label });
-          setPicked(true);
         }}
       />
     );
@@ -53,14 +53,12 @@ export function PassoApp() {
       onStart={() => setRacing(true)}
       onChangeRace={() => {
         clearRace();
-        setPicked(false);
         setRacing(false);
       }}
       onNewData={() => {
         void fetch("/api/garmin/session", { method: "DELETE" }).catch(() => undefined);
         clearProfile();
         clearRace();
-        setPicked(false);
         setRacing(false);
       }}
     />

@@ -34,6 +34,7 @@ export function ImportScreen({
   runs,
   raceLabel,
   onProfile,
+  onClearRuns,
   onGarminDone,
   onRace,
 }: {
@@ -43,6 +44,7 @@ export function ImportScreen({
   runs: number | null;
   raceLabel: string | null;
   onProfile: (p: RunnerProfile) => void;
+  onClearRuns: () => void;
   onGarminDone: () => void;
   onRace: (choice: RaceChoice, label: string) => void;
 }) {
@@ -248,10 +250,23 @@ export function ImportScreen({
             </p>
           ) : (
             <>
-              <p className="text-sm">{runs ? `${runs} runs loaded` : "Your runs"}</p>
-              <p className="mt-1 text-sm text-muted-foreground">Drop a ZIP, FIT, GPX, or TCX. Read in the browser.</p>
+              <p className="text-sm">{runs ? `${runs} ${runs === 1 ? "run" : "runs"} ready` : "Your runs"}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {runs && !raceLabel
+                  ? "Name the race above and press Run."
+                  : "Drop a ZIP, FIT, GPX, or TCX. Read in the browser."}
+              </p>
               <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
                 <Button onClick={() => inputRef.current?.click()}>Choose files</Button>
+                {runs ? (
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                    onClick={onClearRuns}
+                  >
+                    Remove runs
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className="rounded-lg bg-amber-500/15 px-3 py-1.5 text-xs font-semibold text-amber-300 transition hover:bg-amber-500/25 active:scale-95"

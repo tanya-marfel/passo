@@ -117,7 +117,7 @@ export function ProfileScreen({
                 8 Mountain Passes
               </span>
               <span className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 font-medium text-muted-foreground">
-                Fitted from {profile.activityCount} runs
+                Fitted from {profile.activityCount} {profile.activityCount === 1 ? "run" : "runs"}
               </span>
             </div>
           </div>
