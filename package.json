@@ -8,6 +8,8 @@
     "start": "next start -p 4590",
     "lint": "eslint",
     "build:course": "node scripts/build-course.mjs",
+    "calibrate": "tsx --tsconfig tsconfig.json scripts/calibrate.ts",
+    "simulate": "tsx --tsconfig tsconfig.json scripts/simulate.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -34,6 +36,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }
