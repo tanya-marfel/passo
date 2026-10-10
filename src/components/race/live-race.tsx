@@ -34,9 +34,10 @@ export function LiveRace({
   status: PartnerStatus | null;
   onExit: () => void;
 }) {
-  const gradium = Boolean(status?.gradium);
-  const { speak, stop, pause, resume } = useSpeaker(gradium);
-  const speaker = useMemo(() => ({ speak, stop, pause, resume }), [speak, stop, pause, resume]);
+  // Unknown status still tries Gradium. Treating "not loaded yet" as off speaks the browser voice first.
+  const gradium = status?.gradium !== false;
+  const { speak, stop, pause, resume, unlock } = useSpeaker(gradium);
+  const speaker = useMemo(() => ({ speak, stop, pause, resume, unlock }), [speak, stop, pause, resume, unlock]);
   const { engine, view } = useRaceEngine(profile, plan, goal, speaker);
   const listener = useListener(gradium, (text) => engine.ask(text));
   const [follow, setFollow] = useState(true);

@@ -180,6 +180,35 @@ export function useSpeaker(gradium: boolean) {
     });
   }, [whenRunning]);
 
+  const unlock = useCallback(() => {
+    const silent = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=");
+    void silent.play().then(() => silent.pause()).catch(() => undefined);
+  }, []);
+
+  const playGradium = useCallback(
+    async (audio: HTMLAudioElement, token: number) => {
+      if (audio.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
+        await new Promise<void>((resolve, reject) => {
+          const ok = () => resolve();
+          const bad = () => reject(audio.error ?? new Error("audio"));
+          audio.addEventListener("canplay", ok, { once: true });
+          audio.addEventListener("error", bad, { once: true });
+        });
+      }
+      await whenRunning();
+      if (token !== tokenRef.current) return false;
+      if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+      if (!pausedRef.current) await audio.play();
+      await new Promise<void>((resolve, reject) => {
+        if (audio.ended) return resolve();
+        audio.addEventListener("ended", () => resolve(), { once: true });
+        audio.addEventListener("error", () => reject(audio.error ?? new Error("audio")), { once: true });
+      });
+      return true;
+    },
+    [whenRunning],
+  );
+
   const speak = useCallback(
     async (text: string): Promise<VoiceEngine> => {
       stop();
@@ -194,32 +223,26 @@ export function useSpeaker(gradium: boolean) {
           }).catch(() => null);
           if (token !== tokenRef.current) return "none";
           if (res?.ok && (res.headers.get("content-type") ?? "").includes("audio")) {
-            const url = URL.createObjectURL(await res.blob());
-            if (token !== tokenRef.current) {
-              URL.revokeObjectURL(url);
-              return "none";
-            }
-            const audio = new Audio(url);
-            audioRef.current = audio;
-            const ended = new Promise<void>((resolve) => {
-              audio.addEventListener("ended", () => resolve(), { once: true });
-              audio.addEventListener("error", () => resolve(), { once: true });
-            });
-            try {
-              await whenRunning();
-              if (token !== tokenRef.current) {
+            const blob = await res.blob();
+            if (token !== tokenRef.current) return "none";
+            for (let attempt = 0; attempt < 2; attempt++) {
+              const url = URL.createObjectURL(blob);
+              const audio = new Audio(url);
+              audioRef.current = audio;
+              try {
+                const played = await playGradium(audio, token);
+                if (!played || token !== tokenRef.current) return "none";
+                gradiumFailures.current = 0;
+                setEngine("gradium");
+                return "gradium";
+              } catch {
+                audio.pause();
+                audio.removeAttribute("src");
+                audio.load();
+                if (audioRef.current === audio) audioRef.current = null;
+              } finally {
                 URL.revokeObjectURL(url);
-                return "none";
               }
-              if (!pausedRef.current) await audio.play();
-              gradiumFailures.current = 0;
-              setEngine("gradium");
-              await ended;
-              return "gradium";
-            } catch {
-              // Autoplay blocked or decode failure: fall through to the browser voice.
-            } finally {
-              URL.revokeObjectURL(url);
             }
           } else if (res && res.status === 501) {
             gradiumOk.current = false;
@@ -230,6 +253,8 @@ export function useSpeaker(gradium: boolean) {
               .then((j: { reason?: string }) => j.reason)
               .catch(() => undefined);
             toast.warning("Gradium voice is unavailable, so Marmo switched to the browser voice.", { description: reason });
+          } else {
+            return "none";
           }
         }
         if (token !== tokenRef.current) return "none";
@@ -242,10 +267,10 @@ export function useSpeaker(gradium: boolean) {
         if (token === tokenRef.current) setSpeaking(false);
       }
     },
-    [gradium, speakBrowser, stop, whenRunning],
+    [gradium, playGradium, speakBrowser, stop, whenRunning],
   );
 
-  return { speak, stop, pause, resume, speaking, engine };
+  return { speak, stop, pause, resume, unlock, speaking, engine };
 }
 
 type SpeechRecognitionLike = {

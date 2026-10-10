@@ -27,7 +27,14 @@ import {
   type StatusId,
 } from "@/lib/live";
 
-export type Speaker = { speak: (text: string) => Promise<unknown>; stop: () => void; pause: () => void; resume: () => void };
+export type Speaker = {
+  speak: (text: string) => Promise<unknown>;
+  stop: () => void;
+  pause: () => void;
+  resume: () => void;
+  /** Call inside the start click so later Gradium playback is allowed. */
+  unlock?: () => void;
+};
 
 export type CoachTurn = {
   id: number;
@@ -198,6 +205,7 @@ export class RaceEngine {
 
   start(): void {
     if (this.s.finished) return;
+    this.speaker?.unlock?.();
     const resuming = this.ui.started;
     if (!this.ui.started) {
       this.ui.started = true;
