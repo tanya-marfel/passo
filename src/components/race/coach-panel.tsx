@@ -1,23 +1,41 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Loader2, Mic, MicOff, Send, X } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  Mic,
+  MicOff,
+  Send,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { cn } from "cn";
 import { course } from "@/lib/course";
 import type { Plan } from "@/lib/plan";
 import type { CoachLine, CoachTurn, RaceEngine, RaceView } from "@/lib/engine";
 import { describeAction, type BattleLine } from "@/lib/live";
-import { fmtClock, fmtHm } from "@/lib/format";
+import { fmtClock, fmtDuration, fmtHm } from "@/lib/format";
 import type { ListenState } from "@/hooks/use-voice";
 import type { PartnerStatus } from "@/hooks/use-partner-status";
 import { StationBadge } from "@/components/race/station-pin";
+import { MarmoSprite } from "@/components/sprites";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const QUICK = ["How am I doing?", "Where's my shadow?", "How far to the next aid?", "My calf is cramping", "Will I make the cut-off?", "I feel empty"];
+const QUICK = [
+  { text: "How am I doing?", icon: "📊" },
+  { text: "Where's my shadow?", icon: "👻" },
+  { text: "How far to next aid?", icon: "🥤" },
+  { text: "My calf is cramping", icon: "⚡" },
+  { text: "Will I make the cut-off?", icon: "⏱️" },
+  { text: "I feel empty", icon: "🪫" },
+];
 
 function engineLabel(engine: CoachLine["engine"] | undefined, model?: string) {
   if (engine === "gemini") return model ? model.replace(/^models\//, "") : "Gemini";
@@ -25,16 +43,16 @@ function engineLabel(engine: CoachLine["engine"] | undefined, model?: string) {
 }
 
 const TOOL_MOVES: Record<string, { move: string; doing: string }> = {
-  get_race_status: { move: "STATUS CHECK", doing: "Checking your pace, energy and cut-off margins" },
-  get_course_ahead: { move: "TRAIL SCOUT", doing: "Scouting the climbs and aid stations ahead" },
-  get_personal_patterns: { move: "MEMORY DIG", doing: "Digging through your Garmin runs" },
-  replan: { move: "REPLAN", doing: "Testing a new effort against the cut-offs" },
-  speak: { move: "PEP TALK", doing: "Choosing the words" },
-  stay_silent: { move: "QUIET FOCUS", doing: "Letting you run" },
+  get_race_status: { move: "STATUS CHECK", doing: "Checking your pace, energy, and cut-off margins" },
+  get_course_ahead: { move: "TRAIL SCOUT", doing: "Scouting upcoming climbs and aid stations" },
+  get_personal_patterns: { move: "MEMORY DIG", doing: "Analyzing your Garmin history and habits" },
+  replan: { move: "REPLAN", doing: "Recalculating target effort against course cut-offs" },
+  speak: { move: "PEP TALK", doing: "Crafting real-time audio guidance" },
+  stay_silent: { move: "QUIET FOCUS", doing: "Letting you focus on running" },
 };
 
 function toolMove(tool: string) {
-  return TOOL_MOVES[tool] ?? { move: tool.replace(/_/g, " ").toUpperCase(), doing: "Working" };
+  return TOOL_MOVES[tool] ?? { move: tool.replace(/_/g, " ").toUpperCase(), doing: "Thinking" };
 }
 
 function ThinkingState({ turn }: { turn: CoachTurn }) {
@@ -42,11 +60,10 @@ function ThinkingState({ turn }: { turn: CoachTurn }) {
   const last = steps.at(-1);
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
-        <span className="truncate">
-          Marmo is thinking… <span className="text-foreground">{turn.label}</span>
-        </span>
+      <div className="flex items-center gap-2 text-xs text-primary font-medium">
+        <Loader2 className="size-3.5 shrink-0 animate-spin" />
+        <span className="truncate">Marmo is evaluating…</span>
+        <span className="ml-auto rounded bg-primary/15 px-1.5 py-0.2 text-[10px] text-primary">{turn.label}</span>
       </div>
       {last ? (
         <div key={steps.length} className="animate-rise">
@@ -54,7 +71,7 @@ function ThinkingState({ turn }: { turn: CoachTurn }) {
         </div>
       ) : (
         <p className="text-xs text-muted-foreground">
-          {turn.engine === "gemini" ? `${engineLabel("gemini", turn.model)} is choosing a tool` : "Reading the course and your live status"}
+          {turn.engine === "gemini" ? "Consulting Gemini AI with your live telemetry…" : "Evaluating course rules and split times…"}
         </p>
       )}
     </div>
@@ -64,21 +81,58 @@ function ThinkingState({ turn }: { turn: CoachTurn }) {
 export function CoachDialog({ view, idleText }: { view: RaceView; idleText: string }) {
   const line = view.line;
   const thinking = view.thinking;
+  const isTalking = Boolean(view.speaking || (line && !thinking));
+
   return (
-    <div className="rpg-box min-h-[88px] px-3.5 py-3" data-tone={line?.tone} aria-live="polite">
-      {thinking ? (
-        <ThinkingState turn={thinking} />
-      ) : line ? (
-        <>
-          <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
-            <span>{line.label}</span>
-            <span>{engineLabel(line.engine, line.model)}</span>
-          </div>
-          <p className="text-sm leading-snug">{line.text}</p>
-        </>
-      ) : (
-        <p className="text-sm leading-snug text-muted-foreground">{idleText}</p>
+    <div
+      className={cn(
+        "relative rounded-xl border border-white/12 bg-black/60 p-3.5 shadow-lg backdrop-blur-md transition-all",
+        line?.tone === "urgent" && "border-red-500/50 bg-red-950/20",
+        line?.tone === "celebrate" && "border-amber-400/50 bg-amber-950/20",
       )}
+      aria-live="polite"
+    >
+      <div className="flex items-start gap-3">
+        {/* Marmo Avatar */}
+        <div className="relative shrink-0 pt-0.5">
+          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-1.5 shadow-inner">
+            <MarmoSprite height={38} talking={isTalking} />
+          </div>
+          {thinking && (
+            <span className="absolute -bottom-1 -right-1 flex size-3.5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              <Loader2 className="size-2.5 animate-spin" />
+            </span>
+          )}
+        </div>
+
+        {/* Message Content */}
+        <div className="min-w-0 flex-1">
+          {thinking ? (
+            <ThinkingState turn={thinking} />
+          ) : line ? (
+            <>
+              <div className="mb-1 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                <span className="font-semibold text-foreground flex items-center gap-1">
+                  Marmo
+                  <span className="text-muted-foreground font-normal">· {line.label}</span>
+                </span>
+                <span className="rounded bg-white/5 px-1.5 py-0.2 text-[10px]">
+                  {engineLabel(line.engine, line.model)}
+                </span>
+              </div>
+              <p className="text-xs leading-relaxed text-foreground font-medium">{line.text}</p>
+            </>
+          ) : (
+            <>
+              <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-foreground">
+                <span>Marmo</span>
+                <span className="text-[10px] text-muted-foreground font-normal">AI Trail Coach</span>
+              </div>
+              <p className="text-xs leading-relaxed text-muted-foreground">{idleText}</p>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -102,10 +156,11 @@ export function AskBar({
     onAsk(q);
     setText("");
   };
+
   return (
     <div className="space-y-2">
       <form
-        className="flex gap-2"
+        className="relative flex items-center gap-1.5"
         onSubmit={(e) => {
           e.preventDefault();
           submit(text);
@@ -113,40 +168,49 @@ export function AskBar({
       >
         <Button
           type="button"
-          size="icon-lg"
+          size="icon-sm"
           variant={listen === "recording" ? "destructive" : "secondary"}
           onClick={onMic}
           disabled={disabled || listen === "transcribing"}
-          aria-label={listen === "recording" ? "Stop recording" : "Talk to Marmo"}
-          title={micAvailable ? "Talk to Marmo" : "Voice input unavailable in this browser"}
-          className={cn(listen === "recording" && "animate-pulse")}
+          aria-label={listen === "recording" ? "Stop recording voice" : "Talk to Marmo"}
+          title={micAvailable ? "Talk to Marmo" : "Voice input unavailable"}
+          className={cn("size-8 shrink-0", listen === "recording" && "animate-pulse ring-2 ring-red-500/50")}
         >
-          {listen === "transcribing" ? <Loader2 className="animate-spin" /> : micAvailable ? <Mic /> : <MicOff />}
+          {listen === "transcribing" ? <Loader2 className="size-3.5 animate-spin" /> : micAvailable ? <Mic className="size-3.5" /> : <MicOff className="size-3.5" />}
         </Button>
         <Input
           name="message"
           autoComplete="off"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={listen === "recording" ? "Listening… tap the mic to send" : "Ask Marmo anything about your race"}
-          className="h-9"
+          placeholder={listen === "recording" ? "Listening… click mic to send" : "Ask Marmo anything about your race…"}
+          className="h-8 text-xs border-white/10 bg-white/[0.04] pr-8 focus-visible:ring-1"
           disabled={disabled}
           aria-label="Message to Marmo"
         />
-        <Button type="submit" size="icon-lg" disabled={disabled || !text.trim()} aria-label="Send">
-          <Send />
+        <Button
+          type="submit"
+          size="icon-sm"
+          disabled={disabled || !text.trim()}
+          aria-label="Send message"
+          className="size-8 shrink-0"
+        >
+          <Send className="size-3.5" />
         </Button>
       </form>
-      <div className="flex flex-wrap gap-1.5">
+
+      {/* Suggested Prompt Chips */}
+      <div className="flex flex-wrap gap-1">
         {QUICK.map((q) => (
           <button
-            key={q}
+            key={q.text}
             type="button"
             disabled={disabled}
-            onClick={() => submit(q)}
-            className="rounded-full border border-white/12 bg-white/5 px-2.5 py-1 text-[11px] text-muted-foreground transition hover:border-primary/50 hover:text-foreground disabled:opacity-50"
+            onClick={() => submit(q.text)}
+            className="flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[10.5px] text-muted-foreground transition hover:border-white/25 hover:bg-white/[0.07] hover:text-foreground disabled:opacity-50 active:scale-95"
           >
-            {q}
+            <span className="text-[10px]">{q.icon}</span>
+            <span>{q.text}</span>
           </button>
         ))}
       </div>
@@ -172,82 +236,142 @@ function argText(args: Record<string, unknown>) {
   return parts.join(", ");
 }
 
+/**
+ * Clean, human-first Coach Decision Card.
+ * Highlights the coach's spoken advice and applied adjustments first,
+ * with an optional expandable accordion to inspect underlying AI tool calls.
+ */
 function TurnCard({ turn }: { turn: CoachTurn }) {
+  const [showTools, setShowTools] = useState(false);
   const res = turn.response;
   const engine = res?.engine ?? turn.engine;
   const steps = turn.steps ?? res?.steps ?? [];
+  const km = (turn.d / 1000).toFixed(1);
+
   return (
-    <div className="animate-rise rounded-lg border border-white/10 bg-white/[0.03] p-2.5 text-xs">
-      <div className="flex items-center gap-2">
-        {turn.status === "thinking" ? <Loader2 className="size-3.5 animate-spin" /> : null}
-        <span className="font-medium">{turn.label}</span>
-        <span className="ml-auto text-[10px] text-muted-foreground tabular-nums">
-          km {(turn.d / 1000).toFixed(1)} · {fmtClock(turn.t)}
+    <div className="animate-rise rounded-xl border border-white/10 bg-white/[0.02] p-3 text-xs space-y-2">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-2 border-b border-white/5 pb-1.5">
+        <div className="flex items-center gap-1.5">
+          {turn.status === "thinking" ? (
+            <Loader2 className="size-3.5 animate-spin text-primary" />
+          ) : (
+            <Sparkles className="size-3 text-primary" />
+          )}
+          <span className="font-semibold text-foreground">{turn.label}</span>
+        </div>
+        <span className="text-[10px] text-muted-foreground tabular-nums">
+          km {km} · {fmtClock(turn.t)}
         </span>
       </div>
-      {turn.trigger.text && !turn.auto && <div className="mt-1 text-muted-foreground italic">“{turn.trigger.text}”</div>}
-      {(engine || res) && (
-        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-          <Badge variant={engine === "gemini" ? "default" : "secondary"} className="h-4 px-1.5 text-[10px]">
-            {engineLabel(engine, res?.model ?? turn.model)}
-          </Badge>
-          <span className="text-[10px] text-muted-foreground">
-            {res
-              ? `${(res.latencyMs / 1000).toFixed(1)} s · ${steps.length} steps · ${res.decision === "speak" ? "spoke" : "stayed silent"}`
-              : `${steps.length} step${steps.length === 1 ? "" : "s"} so far…`}
-          </span>
+
+      {/* Trigger question if asked by runner */}
+      {turn.trigger.text && !turn.auto && (
+        <div className="rounded-lg bg-white/[0.04] px-2.5 py-1.5 text-xs text-foreground/90 italic">
+          “{turn.trigger.text}”
         </div>
       )}
-      {steps.length > 0 && (
-        <ol className="mt-1.5 space-y-1">
-          {steps.map((s, i) => (
-            <li key={i} className="animate-rise rounded bg-black/25 px-2 py-1 font-mono text-[10.5px] leading-snug">
-              <span className={cn(s.tool === "speak" ? "text-primary" : s.tool === "stay_silent" ? "text-muted-foreground" : "text-sky-300")}>{s.tool}</span>
-              <span className="text-muted-foreground">({argText(s.args)})</span>
-              {s.tool !== "speak" && s.tool !== "stay_silent" && <div className="truncate text-muted-foreground/80">→ {summarize(s.result)}</div>}
-            </li>
-          ))}
-        </ol>
-      )}
+
+      {/* Advice Note / Speech */}
       {res && (
-        <>
-          {res.actions.length > 0 && (
-            <div className="mt-1.5 flex flex-wrap items-center gap-1">
-              {res.actions.map((a, i) => (
-                <span key={i} className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px]", turn.applied ? "bg-you/15 text-you" : "bg-white/5 text-muted-foreground line-through")}>
-                  {turn.applied ? <Check className="size-2.5" /> : <X className="size-2.5" />}
-                  {describeAction(a)}
-                </span>
+        <div className="space-y-1.5">
+          {res.decision === "speak" && res.message ? (
+            <p className="text-xs leading-relaxed text-foreground font-medium">“{res.message}”</p>
+          ) : res.decision === "stay_silent" ? (
+            <p className="text-[11px] text-muted-foreground italic flex items-center gap-1">
+              <span>🤫</span> Marmo observed conditions and stayed silent so you can focus.
+            </p>
+          ) : null}
+
+          {res.note && <p className="text-[11px] text-muted-foreground">{res.note}</p>}
+        </div>
+      )}
+
+      {/* Applied Actions (Pill Badges) */}
+      {res && res.actions.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1 pt-0.5">
+          {res.actions.map((a, i) => (
+            <span
+              key={i}
+              className={cn(
+                "flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-medium",
+                turn.applied
+                  ? "border border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
+                  : "bg-white/5 text-muted-foreground line-through",
+              )}
+            >
+              {turn.applied ? <Check className="size-2.5" /> : <X className="size-2.5" />}
+              {describeAction(a)}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Expandable Agent Reasoning Section */}
+      {steps.length > 0 && (
+        <div className="border-t border-white/5 pt-1.5">
+          <button
+            type="button"
+            onClick={() => setShowTools((v) => !v)}
+            className="flex items-center justify-between w-full text-[10.5px] text-muted-foreground hover:text-foreground transition"
+          >
+            <span className="flex items-center gap-1">
+              <Badge variant={engine === "gemini" ? "default" : "secondary"} className="h-3.5 px-1 text-[9px]">
+                {engineLabel(engine, res?.model ?? turn.model)}
+              </Badge>
+              <span>{steps.length} tool {steps.length === 1 ? "call" : "calls"} {res ? `· ${(res.latencyMs / 1000).toFixed(1)}s` : ""}</span>
+            </span>
+            <span className="flex items-center gap-0.5">
+              <span>{showTools ? "Hide details" : "Show details"}</span>
+              {showTools ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+            </span>
+          </button>
+
+          {showTools && (
+            <ol className="mt-2 space-y-1 animate-rise">
+              {steps.map((s, i) => (
+                <li key={i} className="rounded bg-black/40 p-1.5 font-mono text-[10px] leading-snug">
+                  <div className="flex items-center justify-between">
+                    <span className={cn("font-semibold", s.tool === "speak" ? "text-primary" : s.tool === "stay_silent" ? "text-muted-foreground" : "text-sky-300")}>
+                      {s.tool}
+                    </span>
+                    <span className="text-[9px] text-muted-foreground/70">{toolMove(s.tool).move}</span>
+                  </div>
+                  {Object.keys(s.args).length > 0 && (
+                    <div className="text-muted-foreground truncate mt-0.5">({argText(s.args)})</div>
+                  )}
+                  {s.tool !== "speak" && s.tool !== "stay_silent" && s.result !== undefined && (
+                    <div className="truncate text-muted-foreground/80 mt-0.5">→ {summarize(s.result)}</div>
+                  )}
+                </li>
               ))}
-            </div>
+            </ol>
           )}
-          {res.note && <div className="mt-1 text-[10px] text-muted-foreground">{res.note}</div>}
-        </>
+        </div>
       )}
     </div>
   );
 }
 
-const TONE_CLASS: Record<BattleLine["tone"], string> = {
-  info: "text-foreground/90",
-  good: "text-you",
-  bad: "text-red-300",
-  shadow: "text-shadow",
-  system: "text-amber-200",
+const TONE_STYLE: Record<BattleLine["tone"], { text: string; icon: string }> = {
+  info: { text: "text-foreground", icon: "ℹ️" },
+  good: { text: "text-emerald-300", icon: "✨" },
+  bad: { text: "text-red-300", icon: "⚠️" },
+  shadow: { text: "text-purple-300", icon: "👻" },
+  system: { text: "text-amber-200", icon: "☀️" },
 };
 
 function SplitsTable({ view, plan }: { view: RaceView; plan: Plan }) {
   return (
-    <table className="w-full text-[11px] tabular-nums">
-      <thead className="text-muted-foreground">
-        <tr className="text-left">
-          <th className="py-1 font-medium">Station</th>
-          <th className="py-1 text-right font-medium">Plan</th>
-          <th className="py-1 text-right font-medium">You</th>
-          <th className="py-1 text-right font-medium">Cut-off</th>
-        </tr>
-      </thead>
-      <tbody>
+    <div className="space-y-1.5">
+      <div className="grid grid-cols-[1fr_56px_56px_74px] gap-2 px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+        <span>Station</span>
+        <span className="text-right">Plan</span>
+        <span className="text-right">You</span>
+        <span className="text-right">Cut-off</span>
+      </div>
+
+      <div className="space-y-1">
         {plan.splits
           .filter((s) => s.stationId !== "start")
           .map((sp) => {
@@ -255,26 +379,72 @@ function SplitsTable({ view, plan }: { view: RaceView; plan: Plan }) {
             const passed = st.km * 1000 <= view.d + 1;
             const eta = view.arrivals[sp.stationId];
             const margin = sp.cutoffSec !== null && eta !== undefined ? sp.cutoffSec - eta : null;
+
             return (
-              <tr key={sp.stationId} className={cn("border-t border-white/5", passed && "opacity-45")}>
-                <td className="py-1">
-                  <span className="flex items-center gap-1.5">
-                    <StationBadge kind={st.kind} className="size-3.5 [&_svg]:size-2" />
-                    <span className="truncate">{st.kind === "finish" ? "Finish" : st.name}</span>
-                  </span>
-                </td>
-                <td className="py-1 text-right text-muted-foreground">{fmtClock(sp.planSec, false)}</td>
-                <td className={cn("py-1 text-right", eta !== undefined && eta > sp.planSec + 300 ? "text-amber-300" : "text-you")}>
-                  {passed ? "✓" : eta !== undefined ? fmtClock(eta, false) : "–"}
-                </td>
-                <td className={cn("py-1 text-right", margin !== null && margin < 1800 ? "text-cutoff" : "text-muted-foreground")}>
-                  {st.cutoff ? st.cutoff.replace(/^\w+ /, "") : ""}
-                </td>
-              </tr>
+              <div
+                key={sp.stationId}
+                className={cn(
+                  "grid grid-cols-[1fr_56px_56px_74px] items-center gap-2 rounded-lg border border-white/5 bg-white/[0.02] px-2.5 py-1.5 text-xs transition",
+                  passed && "opacity-45 bg-transparent",
+                  !passed && eta !== undefined && "border-white/15 bg-white/[0.04]",
+                )}
+              >
+                {/* Station Name & Icon */}
+                <div className="flex items-center gap-2 min-w-0">
+                  <StationBadge kind={st.kind} className="size-4 [&_svg]:size-2.5 shrink-0" />
+                  <div className="truncate">
+                    <div className="truncate font-medium text-foreground">
+                      {st.kind === "finish" ? "Finish" : st.name}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground tabular-nums">km {st.km.toFixed(1)}</div>
+                  </div>
+                </div>
+
+                {/* Plan Time */}
+                <div className="text-right text-[11px] tabular-nums text-muted-foreground font-mono">
+                  {fmtClock(sp.planSec, false)}
+                </div>
+
+                {/* Actual / Projected ETA */}
+                <div
+                  className={cn(
+                    "text-right text-[11px] tabular-nums font-mono font-medium",
+                    passed
+                      ? "text-emerald-400"
+                      : eta !== undefined && eta > sp.planSec + 300
+                        ? "text-amber-300"
+                        : "text-emerald-300",
+                  )}
+                >
+                  {passed ? "✓ Done" : eta !== undefined ? fmtClock(eta, false) : "–"}
+                </div>
+
+                {/* Cut-off Safety Margin */}
+                <div className="text-right text-[10.5px] tabular-nums">
+                  {margin !== null ? (
+                    <span
+                      className={cn(
+                        "rounded px-1 py-0.2 font-medium",
+                        margin < 1800
+                          ? "bg-red-500/20 text-red-300"
+                          : margin < 3600
+                            ? "bg-amber-500/20 text-amber-300"
+                            : "bg-emerald-500/20 text-emerald-300",
+                      )}
+                    >
+                      {margin >= 0 ? `+${fmtHm(margin)}` : `-${fmtHm(-margin)}`}
+                    </span>
+                  ) : st.cutoff ? (
+                    <span className="text-muted-foreground">{st.cutoff.replace(/^\w+ /, "")}</span>
+                  ) : (
+                    <span className="text-muted-foreground/60">–</span>
+                  )}
+                </div>
+              </div>
             );
           })}
-      </tbody>
-    </table>
+      </div>
+    </div>
   );
 }
 
@@ -299,48 +469,80 @@ export function CoachPanel({
 }) {
   const idle = view.started
     ? "Ask about pace, the next climb, or how you feel."
-    : `Plan finish ${fmtHm(plan.timeline.finishSec)}. Start when you are ready.`;
+    : `Target finish ${fmtHm(plan.timeline.finishSec)}. Start when ready.`;
+
   return (
     <div className={cn("flex min-h-0 flex-col gap-3", className)}>
+      {/* Marmo Speaking Box */}
       <CoachDialog view={view} idleText={idle} />
-      <AskBar onAsk={(q) => engine.ask(q)} listen={listen} onMic={onMic} micAvailable={micAvailable} />
+
+      {/* Ask / Mic Input Bar */}
+      <AskBar
+        onAsk={(q) => engine.ask(q)}
+        listen={listen}
+        onMic={onMic}
+        micAvailable={micAvailable}
+      />
+
+      {/* Sidebar Tabs */}
       <Tabs defaultValue="agent" className="flex min-h-0 flex-1 flex-col">
-        <TabsList className="w-full">
+        <TabsList className="w-full grid grid-cols-3 border border-white/10 bg-white/[0.04]">
           <TabsTrigger value="agent" className="text-xs">
-            Coach
+            Coach ({view.turns.length})
           </TabsTrigger>
           <TabsTrigger value="log" className="text-xs">
-            Log
+            Feed ({view.log.length})
           </TabsTrigger>
           <TabsTrigger value="splits" className="text-xs">
             Splits
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="agent" className="min-h-0 flex-1">
+
+        {/* Tab 1: Coach Decisions */}
+        <TabsContent value="agent" className="min-h-0 flex-1 mt-2">
           <ScrollArea className="h-full max-h-[52vh] pr-2 lg:max-h-none">
             <div className="space-y-2 pb-2">
-              <p className="px-1 text-[11px] text-muted-foreground">{status?.gemini ? "Decisions use Gemini." : "Decisions use the built-in rules."}</p>
-              {view.turns.length === 0 && <div className="py-6 text-center text-xs text-muted-foreground">Decisions show up here.</div>}
+              <div className="flex items-center justify-between px-1 text-[11px] text-muted-foreground">
+                <span>{status?.gemini ? "Live decisions powered by Gemini." : "Decisions use offline rule engine."}</span>
+              </div>
+              {view.turns.length === 0 && (
+                <div className="py-10 text-center text-xs text-muted-foreground">
+                  Coaching advice and tactical calls will appear here as you run.
+                </div>
+              )}
               {view.turns.map((t) => (
                 <TurnCard key={t.id} turn={t} />
               ))}
             </div>
           </ScrollArea>
         </TabsContent>
-        <TabsContent value="log" className="min-h-0 flex-1">
+
+        {/* Tab 2: Race Event Feed */}
+        <TabsContent value="log" className="min-h-0 flex-1 mt-2">
           <ScrollArea className="h-full max-h-[52vh] pr-2 lg:max-h-none">
-            <ul className="space-y-1 pb-2 font-mono text-[11.5px]">
-              {view.log.length === 0 && <li className="py-6 text-center font-sans text-xs text-muted-foreground">Race events appear here as battle text.</li>}
+            <ul className="space-y-1.5 pb-2 text-xs">
+              {view.log.length === 0 && (
+                <li className="py-10 text-center text-xs text-muted-foreground">
+                  Race milestones, gym clears, and course events appear here.
+                </li>
+              )}
               {view.log.map((l) => (
-                <li key={l.id} className="animate-rise flex gap-2">
-                  <span className="shrink-0 text-muted-foreground/70 tabular-nums">{fmtClock(l.t, false)}</span>
-                  <span className={TONE_CLASS[l.tone]}>{l.text}</span>
+                <li
+                  key={l.id}
+                  className="animate-rise flex items-start gap-2 rounded-lg border border-white/5 bg-white/[0.02] p-2 leading-relaxed"
+                >
+                  <span className="shrink-0 text-[10px] text-muted-foreground/70 tabular-nums font-mono pt-0.5">
+                    {fmtClock(l.t, false)}
+                  </span>
+                  <span className={cn("flex-1", TONE_STYLE[l.tone].text)}>{l.text}</span>
                 </li>
               ))}
             </ul>
           </ScrollArea>
         </TabsContent>
-        <TabsContent value="splits" className="min-h-0 flex-1">
+
+        {/* Tab 3: Splits Table */}
+        <TabsContent value="splits" className="min-h-0 flex-1 mt-2">
           <ScrollArea className="h-full max-h-[52vh] pr-2 lg:max-h-none">
             <SplitsTable view={view} plan={plan} />
           </ScrollArea>
