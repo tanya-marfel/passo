@@ -80,7 +80,7 @@ The map uses OpenFreeMap vector tiles and AWS Terrain Tiles for elevation, and f
 
 - **Google DeepMind Gemini:** Marmo's brain. Multi-round function calling over the course, your patterns and the live race state, ending with an explicit `speak` or `stay_silent` decision.
 - **Gradium:** Marmo's voice (TTS) and push-to-talk questions (STT).
-- **Entire:** run `entire enable` in this repository to capture the AI agent sessions that build Rival Run as checkpoints next to the commits.
+- **Entire:** the repository is Entire-enabled (`.entire/settings.json` and the Cursor hooks in `.cursor/hooks.json`). With the [Entire CLI](https://docs.entire.io/cli/installation) installed, the AI agent sessions that build Rival Run are saved as checkpoints next to the commits. Without the CLI the hooks do nothing.
 
 ## Scripts
 
