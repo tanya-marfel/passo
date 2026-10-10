@@ -38,7 +38,7 @@ export function SimControls({ view, engine, className }: { view: RaceView; engin
   const effortPct = Math.round(view.effort * 100);
   return (
     <div className={cn("flex flex-wrap items-center gap-x-4 gap-y-2.5", className)}>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button
           size="lg"
           onClick={() => engine.togglePlay()}

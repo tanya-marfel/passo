@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Map as MLMap, Marker, NavigationControl, setWorkerUrl, type GeoJSONSource } from "maplibre-gl";
+import { Map as MLMap, Marker, NavigationControl, setWorkerUrl, type ExpressionSpecification, type GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { FeatureCollection, LineString } from "geojson";
 import { Box, Crosshair, Expand } from "lucide-react";
@@ -93,7 +93,8 @@ export default function RaceMap({ getFrame, follow, onFollowChange, onFail, clas
     const stationMarkers = course.aidStations.map((s, i) =>
       new Marker({ element: els.stations[i], anchor: "bottom" }).setLngLat([s.lon, s.lat]).addTo(map),
     );
-    const shadow = new Marker({ element: els.shadow, anchor: "bottom" }).setLngLat(lngLatAt(0)).addTo(map);
+    // Offset so the Shadow stays readable when it runs right next to the runner.
+    const shadow = new Marker({ element: els.shadow, anchor: "bottom", offset: [-30, 4] }).setLngLat(lngLatAt(0)).addTo(map);
     const runner = new Marker({ element: els.runner, anchor: "bottom" }).setLngLat(lngLatAt(0)).addTo(map);
     markersRef.current = { runner, shadow };
     const markers = [...stationMarkers, shadow, runner];
@@ -133,11 +134,14 @@ export default function RaceMap({ getFrame, follow, onFollowChange, onFail, clas
       map.addSource("course", { type: "geojson", data: courseGeoJSON() });
       map.addSource("gyms", { type: "geojson", data: gymsGeoJSON() });
       map.addSource("progress", { type: "geojson", data: lineBetween(0, 1) });
-      map.addLayer({ id: "course-casing", type: "line", source: "course", layout: { "line-join": "round", "line-cap": "round" }, paint: { "line-color": "#0b1020", "line-width": 7, "line-opacity": 0.75 } });
-      map.addLayer({ id: "course-line", type: "line", source: "course", layout: { "line-join": "round", "line-cap": "round" }, paint: { "line-color": "#f8fafc", "line-width": 3.5 } });
-      map.addLayer({ id: "gyms-glow", type: "line", source: "gyms", layout: { "line-join": "round", "line-cap": "round" }, paint: { "line-color": "#fbbf24", "line-width": 12, "line-opacity": 0.28, "line-blur": 4 } });
-      map.addLayer({ id: "gyms-line", type: "line", source: "gyms", layout: { "line-join": "round", "line-cap": "round" }, paint: { "line-color": "#fbbf24", "line-width": 4 } });
-      map.addLayer({ id: "progress-line", type: "line", source: "progress", layout: { "line-join": "round", "line-cap": "round" }, paint: { "line-color": "#34d399", "line-width": 5.5 } });
+      const round = { "line-join": "round", "line-cap": "round" } as const;
+      const width = (base: number): ExpressionSpecification => ["interpolate", ["linear"], ["zoom"], 10, base * 0.6, 13, base, 15, base * 1.5];
+      map.addLayer({ id: "course-casing", type: "line", source: "course", layout: round, paint: { "line-color": "#0b1020", "line-width": width(9), "line-opacity": 0.9 } });
+      map.addLayer({ id: "course-line", type: "line", source: "course", layout: round, paint: { "line-color": "#ffffff", "line-width": width(4.5) } });
+      map.addLayer({ id: "gyms-glow", type: "line", source: "gyms", layout: round, paint: { "line-color": "#fbbf24", "line-width": width(16), "line-opacity": 0.3, "line-blur": 5 } });
+      map.addLayer({ id: "gyms-line", type: "line", source: "gyms", layout: { "line-join": "round" }, paint: { "line-color": "#fbbf24", "line-width": width(4.5), "line-dasharray": [2, 1.2] } });
+      map.addLayer({ id: "progress-casing", type: "line", source: "progress", layout: round, paint: { "line-color": "#022c22", "line-width": width(10), "line-opacity": 0.85 } });
+      map.addLayer({ id: "progress-line", type: "line", source: "progress", layout: round, paint: { "line-color": "#34d399", "line-width": width(6) } });
       map.addLayer({
         id: "gyms-label",
         type: "symbol",

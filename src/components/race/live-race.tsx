@@ -76,8 +76,8 @@ export function LiveRace({
         <PartnerPills status={status} className="ml-auto" />
       </header>
 
-      <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_420px]">
-        <main className="flex min-h-0 flex-col">
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_420px]">
+        <main className="flex min-h-0 min-w-0 flex-col">
           <div className="relative h-[52vh] min-h-[340px] lg:h-auto lg:flex-1">
             <RaceMapClient getFrame={engine.getFrame} runnerD={view.d} shadowD={view.shadowD} follow={follow} onFollowChange={setFollow} />
             <ShadowBox view={view} profile={profile} plan={plan} className="absolute top-3 left-3 w-[min(19rem,calc(100%-4.5rem))]" />
