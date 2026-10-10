@@ -239,7 +239,8 @@ export default function RaceMap({ getFrame, follow, onFollowChange, onFail, clas
 
   return (
     <div className={cn("relative h-full w-full overflow-hidden bg-[#0b1020]", far && "[&_.station-name]:hidden", className)}>
-      <div ref={containerRef} className="absolute inset-0" />
+      {/* Inline: maplibre-gl.css is unlayered and its `position: relative` beats Tailwind's layered `absolute`. */}
+      <div ref={containerRef} style={{ position: "absolute", inset: 0 }} />
       <div ref={overlayRef} className="pointer-events-none absolute inset-0 transition-opacity duration-700" style={{ opacity: 1 }} />
       {!ready && (
         <div className="absolute inset-0 grid place-items-center text-sm text-muted-foreground">
