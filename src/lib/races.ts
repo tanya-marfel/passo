@@ -295,8 +295,16 @@ function known(id: string): { choice: RaceChoice; label: string } {
   return { choice: { id }, label: spec.name };
 }
 
-function customSpec(name: string, km: number, gain: number, gainEstimated: boolean): RaceSpec {
-  const id = `custom-${hash(`${name}|${km}|${gain}`)}`;
+function placeFor(q: string): { location: string; lat: number; lon: number; timeZone: string } | null {
+  if (/lavaredo|cortina|dolomit|tre cime/.test(q)) return { location: "Cortina d'Ampezzo", lat: 46.5369, lon: 12.1357, timeZone: "Europe/Rome" };
+  if (/\bccc\b|courmayeur/.test(q)) return { location: "Courmayeur", lat: 45.7966, lon: 6.9687, timeZone: "Europe/Paris" };
+  if (/\butmb\b|chamonix|mont[\s-]?blanc/.test(q)) return { location: "Chamonix", lat: 45.9237, lon: 6.8694, timeZone: "Europe/Paris" };
+  if (/western states|olympic valley|auburn/.test(q)) return { location: "Olympic Valley", lat: 39.1966, lon: -120.2355, timeZone: "America/Los_Angeles" };
+  return null;
+}
+
+function customSpec(name: string, km: number, gain: number, gainEstimated: boolean, place: ReturnType<typeof placeFor>): RaceSpec {
+  const id = `custom-${hash(`${name}|${km}|${gain}|${place?.location ?? ""}`)}`;
   const long = km >= 100;
   const hours = Math.min(48, Math.max(long ? 20 : 6, Math.round(km / 4.2 + gain / 900)));
   const startLocal = long ? "Fri 18 Jun 2027, 22:00" : "Sat 19 Jun 2027, 07:00";
@@ -305,19 +313,26 @@ function customSpec(name: string, km: number, gain: number, gainEstimated: boole
     id,
     name,
     shortName: name.length > 28 ? `${name.slice(0, 26)}…` : name,
-    location: "the start you described",
-    lat: 46.2,
-    lon: 7.4,
+    location: place?.location ?? "the start you described",
+    lat: place?.lat ?? 46.2,
+    lon: place?.lon ?? 7.4,
     distanceKm: Math.round(km * 10) / 10,
     gainM: Math.round(gain),
     timeLimitSec: hours * 3600,
     startLocal,
     startUtc,
-    timeZone: "Europe/Paris",
+    timeZone: place?.timeZone ?? "Europe/Paris",
     sunriseLocalSec: 5 * 3600 + 30 * 60,
     sunsetLocalSec: 21 * 3600 + 15 * 60,
     gainEstimated,
   };
+}
+
+function statedKm(q: string) {
+  const mile = /(\d+(?:\.\d+)?)\s*(?:miles|mile|mi)\b/.exec(q);
+  if (mile) return Number(mile[1]) * 1.60934;
+  const kmMatch = /(\d+(?:\.\d+)?)\s*(?:km|k)\b/.exec(q);
+  return kmMatch ? Number(kmMatch[1]) : null;
 }
 
 /** Turn a spoken or typed sentence into a race, or one question if it isn't enough. */
@@ -325,14 +340,17 @@ export function interpretRace(text: string): { choice: RaceChoice; label: string
   const raw = text.trim();
   if (raw.length < 2) return { ask: "What are you running? A name, or a distance and the climbing." };
   const q = raw.toLowerCase();
-  if (/lavaredo|\blut\b|tre cime/.test(q)) return known("lut-120");
-  if (/\bccc\b|courmayeur/.test(q)) return known("ccc");
-  if (/western states|\bws\s?100\b/.test(q)) return known("ws100");
-  if (/\butmb\b|mont[\s-]?blanc/.test(q)) return known("utmb");
+  const stated = statedKm(q);
+  const named: { test: RegExp; id: string; km: number; slack: number }[] = [
+    { test: /lavaredo|\blut\b|tre cime/, id: "lut-120", km: 120, slack: 12 },
+    { test: /\bccc\b|courmayeur/, id: "ccc", km: 101, slack: 12 },
+    { test: /western states|\bws\s?100\b/, id: "ws100", km: 161, slack: 15 },
+    { test: /\butmb\b|mont[\s-]?blanc/, id: "utmb", km: 171, slack: 15 },
+  ];
+  const hit = named.find((n) => n.test.test(q));
+  if (hit && (stated === null || Math.abs(stated - hit.km) <= hit.slack)) return known(hit.id);
 
-  const mile = /(\d+(?:\.\d+)?)\s*(?:miles|mile|mi)\b/.exec(q);
-  const kmMatch = /(\d+(?:\.\d+)?)\s*(?:km|k)\b/.exec(q);
-  let km = mile ? Number(mile[1]) * 1.60934 : kmMatch ? Number(kmMatch[1]) : null;
+  let km = stated;
   const gainMatch = /(\d[\d,]{2,6})\s*(?:m\b|metres|meters)/.exec(q);
   let gain = gainMatch ? Number(gainMatch[1].replace(/,/g, "")) : null;
   if (gain !== null && gain < 200) gain = null;
@@ -350,7 +368,8 @@ export function interpretRace(text: string): { choice: RaceChoice; label: string
     .replace(/\s+/g, " ")
     .trim();
   if (name.length < 3) name = `${Math.round(km)} km`;
+  if (!new RegExp(`\\b${Math.round(km)}\\b`).test(name)) name = `${name} ${Math.round(km)}K`;
   name = name.charAt(0).toUpperCase() + name.slice(1);
-  const spec = customSpec(name, km, gain, gainEstimated);
+  const spec = customSpec(name, km, gain, gainEstimated, placeFor(q));
   return { choice: { id: spec.id, spec }, label: spec.shortName };
 }
