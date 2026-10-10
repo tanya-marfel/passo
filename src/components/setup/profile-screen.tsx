@@ -310,7 +310,7 @@ export function ProfileScreen({
           <Upload /> New data
         </Button>
       </AppHeader>
-      <main className="mx-auto grid w-full max-w-7xl gap-5 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+      <main className="mx-auto grid w-full max-w-7xl grid-cols-[minmax(0,1fr)] gap-5 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
         <div className="space-y-5">
           <TrainerCard profile={profile} onRename={onRename} />
           <ShadowMoves profile={profile} />
@@ -322,6 +322,17 @@ export function ProfileScreen({
           </p>
         </div>
       </main>
+      <div className="sticky bottom-0 z-20 flex items-center gap-3 border-t border-white/10 bg-background/90 px-4 py-3 backdrop-blur lg:hidden">
+        <div className="min-w-0 flex-1 text-xs leading-tight">
+          <div className="truncate font-medium">{course.name}</div>
+          <div className="text-muted-foreground tabular-nums">
+            Plan <span className="text-you">{fmtDuration(plan.timeline.finishSec)}</span> · Shadow <span className="text-shadow">{fmtDuration(plan.shadow.finishSec)}</span>
+          </div>
+        </div>
+        <Button onClick={onStart}>
+          <Play /> Start live race
+        </Button>
+      </div>
     </div>
   );
 }
