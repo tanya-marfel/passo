@@ -27,8 +27,8 @@ export type ToolContext = {
   actions: CoachAction[];
 };
 
-export function makeToolContext(req: CoachRequest): ToolContext {
-  return { req, plan: buildPlan(req.profile, req.goal, req.targetSec), actions: [] };
+export function makeToolContext(req: CoachRequest, plan?: Plan): ToolContext {
+  return { req, plan: plan ?? buildPlan(req.profile, req.goal, req.targetSec), actions: [] };
 }
 
 const km1 = (m: number) => Math.round(m / 100) / 10;

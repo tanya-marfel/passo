@@ -42,3 +42,6 @@ next-env.d.ts
 
 # raw course data (rebuilt with scripts/build-course.mjs)
 /data/*.gpx
+
+# copied from node_modules by scripts/copy-maplibre-worker.mjs
+/public/maplibre-gl-worker.mjs

@@ -1,5 +1,5 @@
 import { course, nextStation, stationD, climbStartD, climbEndD, rangeStats, localClockSec } from "@/lib/course";
-import { timeAtDistance, distanceAtTime } from "@/lib/plan";
+import { timeAtDistance, distanceAtTime, type Plan } from "@/lib/plan";
 import { fmtDuration, fmtHm, fmtPace } from "@/lib/format";
 import type { CoachAction, CoachRequest, CoachResponse, CoachStep } from "@/lib/coach/types";
 import {
@@ -398,9 +398,9 @@ function answerRunner(ctx: ToolContext, steps: CoachStep[], text: string): Draft
   };
 }
 
-export function offlineCoach(req: CoachRequest, note?: string): CoachResponse {
+export function offlineCoach(req: CoachRequest, note?: string, plan?: Plan): CoachResponse {
   const t0 = Date.now();
-  const ctx = makeToolContext(req);
+  const ctx = makeToolContext(req, plan);
   const steps: CoachStep[] = [];
   const draft = decide(ctx, steps);
   const actions = [...ctx.actions, ...(draft.actions ?? [])];

@@ -1,0 +1,202 @@
+"use client";
+
+import { useRef, useState } from "react";
+import { toast } from "sonner";
+import { FileUp, Loader2, Lock, Sparkles, Upload } from "lucide-react";
+import { cn } from "cn";
+import { importFiles } from "@/lib/garmin";
+import { buildProfile, type RunnerProfile } from "@/lib/profile";
+import { sampleActivities } from "@/lib/sample";
+import { course } from "@/lib/course";
+import type { PartnerStatus } from "@/hooks/use-partner-status";
+import { AppHeader } from "@/components/app-header";
+import { MarmoSprite, RunnerSprite, ShadowSprite } from "@/components/sprites";
+import { ElevationProfile } from "@/components/race/elevation-profile";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+
+const STEPS = [
+  { title: "Read your runs", body: "Pace on flats, climbs and descents, how you fade, how you fuel, how long you stop. All parsed on your device." },
+  { title: "Meet your Shadow", body: "A rival built from your habits: same legs, same mistakes. It runs Lavaredo the way the old you would." },
+  { title: "Race with Marmo", body: "A live AI coach on a 3D course. It watches every km, calls the climbs and replans when things go wrong." },
+];
+
+const nextTick = () => new Promise((r) => setTimeout(r, 30));
+
+export function ImportScreen({ status, onProfile }: { status: PartnerStatus | null; onProfile: (p: RunnerProfile) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [skipped, setSkipped] = useState<{ file: string; reason: string }[]>([]);
+  const [dragging, setDragging] = useState(false);
+
+  const handleFiles = async (list: FileList | File[]) => {
+    const files = Array.from(list);
+    if (!files.length) return;
+    setError(null);
+    setSkipped([]);
+    setBusy(`Reading ${files.length} file${files.length > 1 ? "s" : ""}…`);
+    await nextTick();
+    try {
+      const res = await importFiles(files);
+      setSkipped(res.skipped);
+      if (!res.activities.length) {
+        setError("No runs with GPS and timestamps were found in those files. Try FIT, GPX or TCX exports of your runs.");
+        return;
+      }
+      setBusy(`Marmo is studying ${res.activities.length} run${res.activities.length > 1 ? "s" : ""}…`);
+      await nextTick();
+      const profile = buildProfile(res.activities, { source: "garmin" });
+      if (res.skipped.length) toast.info(`Analysed ${profile.activityCount} runs, skipped ${res.skipped.length} file${res.skipped.length > 1 ? "s" : ""}.`);
+      onProfile(profile);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Those files couldn't be read.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const loadSample = async () => {
+    setError(null);
+    setBusy("Loading the sample runner…");
+    await nextTick();
+    try {
+      onProfile(buildProfile(sampleActivities(), { source: "sample", name: "Sample runner" }));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div className="flex min-h-dvh flex-col">
+      <AppHeader status={status} />
+      <main className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-10 px-4 py-8 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:py-12">
+        <section>
+          <div className="font-pixel text-[9px] leading-relaxed text-primary">
+            {course.name.toUpperCase()} · JUNE 2027
+          </div>
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-balance sm:text-5xl">Race the runner you used to be.</h1>
+          <p className="mt-4 max-w-xl text-base text-pretty text-muted-foreground sm:text-lg">
+            Rival Run reads your Garmin history, finds the mistakes you keep making and turns them into your <span className="text-shadow">Shadow</span>: a rival that runs
+            Lavaredo exactly like the old you. <span className="text-primary">Marmo</span>, your AI trail coach, calls the race live, kilometre by kilometre.
+          </p>
+
+          <Card
+            className={cn("mt-7 border-2 border-dashed transition", dragging ? "border-primary bg-primary/5" : "border-white/15")}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragging(false);
+              void handleFiles(e.dataTransfer.files);
+            }}
+          >
+            <CardContent className="flex flex-col items-center gap-3 py-7 text-center">
+              {busy ? (
+                <>
+                  <Loader2 className="size-8 animate-spin text-primary" />
+                  <p className="font-medium">{busy}</p>
+                </>
+              ) : (
+                <>
+                  <div className="grid size-12 place-items-center rounded-full bg-primary/15 text-primary">
+                    <Upload className="size-6" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Drop your Garmin runs here</p>
+                    <p className="mt-1 text-sm text-muted-foreground">FIT, GPX, TCX or a Garmin Connect ZIP export. Your longest runs tell Marmo the most.</p>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <Button size="lg" onClick={() => inputRef.current?.click()}>
+                      <FileUp /> Choose files
+                    </Button>
+                    <Button size="lg" variant="secondary" onClick={loadSample}>
+                      <Sparkles /> Try the sample runner
+                    </Button>
+                  </div>
+                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Lock className="size-3" /> Files are parsed in your browser. Only a compact summary goes to the coach.
+                  </p>
+                </>
+              )}
+              <input
+                ref={inputRef}
+                type="file"
+                multiple
+                accept=".fit,.gpx,.tcx,.zip,application/zip,application/gpx+xml"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files) void handleFiles(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+            </CardContent>
+          </Card>
+
+          {error && <p className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-red-200">{error}</p>}
+          {skipped.length > 0 && (
+            <details className="mt-2 text-xs text-muted-foreground">
+              <summary className="cursor-pointer">{skipped.length} file{skipped.length > 1 ? "s" : ""} skipped</summary>
+              <ul className="mt-1 space-y-0.5">
+                {skipped.slice(0, 12).map((s) => (
+                  <li key={s.file}>
+                    {s.file}: {s.reason}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+
+          <details className="mt-4 text-sm text-muted-foreground">
+            <summary className="cursor-pointer text-foreground/80">How do I export from Garmin Connect?</summary>
+            <ol className="mt-2 list-decimal space-y-1 pl-5">
+              <li>Open a run on connect.garmin.com, click the gear icon and choose Export Original (a ZIP with the FIT file) or Export to GPX/TCX.</li>
+              <li>For your whole history: Account settings, Data Management, Export Your Data. Drop the ZIP as is.</li>
+              <li>Pick your 5 to 15 longest runs and races, ideally trail runs with real climbs.</li>
+            </ol>
+          </details>
+        </section>
+
+        <section className="relative">
+          <div className="rpg-box overflow-hidden p-5">
+            <div className="font-pixel text-center text-[9px] text-muted-foreground">A WILD SHADOW APPEARED!</div>
+            <div className="mt-5 flex items-end justify-around">
+              <div className="flex flex-col items-center gap-2">
+                <RunnerSprite height={92} className="animate-bob" />
+                <span className="font-pixel text-[9px] text-you">YOU</span>
+              </div>
+              <span className="font-pixel mb-10 text-2xl text-primary">VS</span>
+              <div className="flex flex-col items-center gap-2">
+                <ShadowSprite height={92} />
+                <span className="font-pixel text-[9px] text-shadow">SHADOW</span>
+              </div>
+            </div>
+            <ElevationProfile height={110} className="mt-4 opacity-90" />
+            <div className="mt-2 flex items-start gap-3">
+              <MarmoSprite height={64} />
+              <div className="rpg-box flex-1 px-3 py-2 text-sm">
+                119.5 km, 5,000 m of climbing and 8 gyms between Cortina and the Tre Cime. Show me your runs and I&apos;ll show you exactly where your Shadow will beat you.
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <section className="mx-auto grid w-full max-w-6xl gap-4 px-4 pb-10 sm:grid-cols-3 sm:px-6">
+        {STEPS.map((s, i) => (
+          <div key={s.title} className="rounded-xl border border-white/8 bg-card/60 p-4">
+            <div className="font-pixel text-[9px] text-primary">STEP {i + 1}</div>
+            <div className="mt-2 font-medium">{s.title}</div>
+            <p className="mt-1 text-sm text-muted-foreground">{s.body}</p>
+          </div>
+        ))}
+      </section>
+      <footer className="border-t border-white/8 px-4 py-4 text-center text-xs text-muted-foreground sm:px-6">
+        Coach brain by Google DeepMind Gemini · Voice by Gradium · Built with Entire checkpoints · Course: official Lavaredo 120K GPX · Original creatures and art
+      </footer>
+    </div>
+  );
+}
