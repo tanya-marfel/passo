@@ -1,6 +1,6 @@
 # Passo
 
-**Race the runner you used to be.** An AI-powered ultra-trail race pacer and tactical companion in the Dolomites.
+**Race the runner you used to be.** An AI-powered ultra-trail race pacer and tactical companion for any mountain race.
 
 Built for an agentic AI hackathon with Google DeepMind Gemini (agent brain), Gradium (voice) and Entire (agent session checkpoints).
 
@@ -9,7 +9,7 @@ Built for an agentic AI hackathon with Google DeepMind Gemini (agent brain), Gra
 ## The Vision & The Hackathon Reality
 
 - **The Vision:** An on-wrist **Garmin Connect IQ app** that serves as your live tactical race strategist. Wearing it during an ultramarathon, it monitors grade-adjusted pace, heart-rate drift, climb pacing, and aid-station dwell times directly from your Garmin watch, delivering proactive audio coaching through your Bluetooth headphones.
-- **The Hackathon Reality:** You can't run a 48 km mountain ultra with 2,600 m of vertical climb through the Dolomites during a hackathon to evaluate live agent interventions. So we built **Passo**: a high-fidelity digital twin and race simulation harness. It reproduces real course topography (Cortina Trail / Lavaredo), fits your historical Garmin pacing curves, models fatigue and nutrition depletion, and lets the Gemini agent call tactical decisions in real time.
+- **The Hackathon Reality:** You can't run a 48 km mountain ultra with 2,600 m of vertical climb during a hackathon to evaluate live agent interventions. So we built **Passo**: a high-fidelity digital twin and race simulation harness. It can ingest any race course GPX (demoed here with the Cortina Trail / Lavaredo), fits your historical Garmin pacing curves, models fatigue and nutrition depletion, and lets the Gemini agent call tactical decisions in real time.
 
 ---
 
@@ -41,7 +41,7 @@ Open [http://localhost:4590](http://localhost:4590).
 1. **Fits Your Personal Running Model:** From historical Garmin runs, Passo calculates your flat pace, climb speed, descent technique, and fatigue degradation curve. It identifies recurring tendencies: fast starts, overcooking initial climbs, late-race bonking, under-fuelling, and lingering at aid stations.
 2. **Meets Your Shadow Rival:** Your historical pacing flaws are embodied by the **Shadow Rival**—a spectral runner pacing according to your past mistakes ("Fast Start", "Reckless Climb", "Empty Tank").
 3. **Generates an Altitude-Aware Race Plan:** Using the official course GPX, Passo calculates cut-off safety margins for every aid station and creates pacing plans for **Safe**, **Target**, or **Stretch** goals.
-4. **Simulates the Live Mountain Race:** Race in 3D terrain over the Dolomites. Climbs are mountain gym passes with collectible badges, energy is monitored via an HP battery gauge, and weather, cramps, and nutrition are dynamic status effects.
+4. **Simulates the Live Mountain Race:** Race in 3D mountain terrain on any course. Climbs are mountain gym passes with collectible badges, energy is monitored via an HP battery gauge, and weather, cramps, and nutrition are dynamic status effects.
 5. **Autonomous AI Coach (Marmo):** When race conditions change (approaching a climb, summiting, passing an aid station, low energy, shadow overtaking, cramp, storm, or user voice query), the **Gemini agent** wakes up. It calls tools (`get_race_status`, `get_course_ahead`, `replan`, `speak`), decides whether to intervene or remain silent, and adjusts runner effort when **Follow Marmo** is enabled.
 6. **Voice Interaction:** Marmo speaks tactical instructions via **Gradium text-to-speech**. Runners can press the mic to ask questions via **Gradium speech-to-text** (e.g., *"Will I make the Cimabanche cut-off if I slow down 5%?"*).
 

@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Passo · Ultra-Trail Race Simulator & Pacing Duel",
-  description: "Race the runner you used to be on the Dolomites trails. Guided by Marmo, your alpine trail coach.",
+  description: "Race the runner you used to be. AI-powered race pacing and tactical companion for any mountain race.",
 };
 
 export const viewport: Viewport = {

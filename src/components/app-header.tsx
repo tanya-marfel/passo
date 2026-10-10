@@ -36,7 +36,7 @@ export function Logo({ className }: { className?: string }) {
     <div className={cn("flex items-center gap-2", className)}>
       <span className="text-sm font-semibold tracking-tight text-foreground">Passo</span>
       <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-        Dolomites
+        AI Pacer
       </span>
     </div>
   );
