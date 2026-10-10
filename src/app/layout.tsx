@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Rival Run",
-  description: "Name a race, bring a Garmin history, and get a live coach on the published route.",
+  title: "Passo · Ultra-Trail Race Simulator & Pacing Duel",
+  description: "Race the runner you used to be on the Dolomites trails. Guided by Marmo, your alpine trail coach.",
 };
 
 export const viewport: Viewport = {

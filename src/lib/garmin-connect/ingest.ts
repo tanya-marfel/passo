@@ -119,7 +119,7 @@ export function ingestGarminPayload(body: unknown, fallbackUserId: string | null
       const session = sessionForUser(userId);
       if (!session) continue;
       session.activities = [];
-      session.notice = "This Garmin account disconnected Rival Run.";
+      session.notice = "This Garmin account disconnected Passo.";
     }
   }
   const details = [

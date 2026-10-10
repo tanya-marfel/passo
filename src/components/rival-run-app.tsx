@@ -10,7 +10,7 @@ import { finishGarminReturn, ImportScreen } from "@/components/setup/import-scre
 import { ProfileScreen } from "@/components/setup/profile-screen";
 import { LiveRace } from "@/components/race/live-race";
 
-export function RivalRunApp() {
+export function PassoApp() {
   const profile = useStoredProfile();
   const race = useStoredRace();
   const goal = useStoredGoal();
@@ -66,3 +66,5 @@ export function RivalRunApp() {
     />
   );
 }
+
+export const RivalRunApp = PassoApp;

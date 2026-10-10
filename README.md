@@ -1,12 +1,12 @@
-# Rival Run
+# Passo
 
-**Race the runner you used to be.** You type what you are running. Rival Run looks up the published route, then a Garmin history becomes a short report and a simulation where Marmo speaks the calls that would have changed the result.
+**Race the runner you used to be.** You type what you are running. Passo looks up the published route, then a Garmin history becomes a short report and a simulation where Marmo speaks the calls that would have changed the result.
 
 Built for an agentic AI hackathon with Google DeepMind Gemini (agent brain), Gradium (voice) and Entire (agent session checkpoints).
 
 ## What it does
 
-1. **Sign in with Garmin.** The button sends you to Garmin Connect. You sign in to your account there, allow RaceIQ to read your activities, and come back. Rival Run never sees your password. From the runs Garmin delivers, it fits a personal pace model (flat pace, climbing speed, descent skill, fatigue curve) and detects recurring mistakes: fast starts, attacking long climbs then stalling, late fades, under-fuelling, lingering at aid stations, braking on descents and heart-rate drift. It also notes if you have never run this long or in the dark.
+1. **Sign in with Garmin.** The button sends you to Garmin Connect. You sign in to your account there, allow RaceIQ to read your activities, and come back. Passo never sees your password. From the runs Garmin delivers, it fits a personal pace model (flat pace, climbing speed, descent skill, fatigue curve) and detects recurring mistakes: fast starts, attacking long climbs then stalling, late fades, under-fuelling, lingering at aid stations, braking on descents and heart-rate drift. It also notes if you have never run this long or in the dark.
 2. **Meet your Shadow.** Each mistake becomes one of the Shadow's moves ("Fast Start", "Reckless Climb", "Empty Tank", ...), with the evidence from your runs and Marmo's counter.
 3. **Plan the route that was looked up.** Distance, climb, aid stations and cut-offs come from the published page. You get an even-effort plan for a Safe, "Your data" or Stretch goal, the cut-off margins, and the Shadow's projected race.
 4. **Race it live.** The clock starts at the published start time. The simulated runner carries your habits unless Marmo talks you out of them. Climbs are gyms with badges, energy is an HP bar, aid stations restore energy, and cramps, storms and the night low are status effects.
@@ -89,7 +89,7 @@ The map uses OpenFreeMap vector tiles and AWS Terrain Tiles for elevation, and f
 
 - **Google DeepMind Gemini:** Marmo's brain. Multi-round function calling over the course, your patterns and the live race state, ending with an explicit `speak` or `stay_silent` decision.
 - **Gradium:** Marmo's voice (TTS) and push-to-talk questions (STT).
-- **Entire:** the repository is Entire-enabled (`.entire/settings.json` and the Cursor hooks in `.cursor/hooks.json`). With the [Entire CLI](https://docs.entire.io/cli/installation) installed, the AI agent sessions that build Rival Run are saved as checkpoints next to the commits. Without the CLI the hooks do nothing.
+- **Entire:** the repository is Entire-enabled (`.entire/settings.json` and the Cursor hooks in `.cursor/hooks.json`). With the [Entire CLI](https://docs.entire.io/cli/installation) installed, the AI agent sessions that build Passo are saved as checkpoints next to the commits. Without the CLI the hooks do nothing.
 
 ## Scripts
 

@@ -32,7 +32,14 @@ export function PartnerPills({ status, className }: { status: PartnerStatus | nu
 }
 
 export function Logo({ className }: { className?: string }) {
-  return <div className={cn("text-sm font-medium tracking-tight", className)}>Rival Run</div>;
+  return (
+    <div className={cn("flex items-center gap-2", className)}>
+      <span className="text-sm font-semibold tracking-tight text-foreground">Passo</span>
+      <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+        Dolomites
+      </span>
+    </div>
+  );
 }
 
 export function AppHeader({ status, children, className }: { status: PartnerStatus | null; children?: ReactNode; className?: string }) {

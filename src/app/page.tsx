@@ -1,5 +1,5 @@
-import { RivalRunApp } from "@/components/rival-run-app";
+import { PassoApp } from "@/components/rival-run-app";
 
 export default function Home() {
-  return <RivalRunApp />;
+  return <PassoApp />;
 }

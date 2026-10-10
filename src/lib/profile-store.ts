@@ -5,9 +5,14 @@ import type { RunnerProfile } from "@/lib/profile";
 import type { GoalId } from "@/lib/plan";
 import type { RaceChoice } from "@/lib/races";
 
-const PROFILE_KEY = "rival-run.profile.v1";
-const GOAL_KEY = "rival-run.goal.v1";
-const RACE_KEY = "rival-run.race.v1";
+const PROFILE_KEY = "passo.profile.v1";
+const LEGACY_PROFILE_KEY = "rival-run.profile.v1";
+
+const GOAL_KEY = "passo.goal.v1";
+const LEGACY_GOAL_KEY = "rival-run.goal.v1";
+
+const RACE_KEY = "passo.race.v1";
+const LEGACY_RACE_KEY = "rival-run.race.v1";
 
 export type StoredRace = RaceChoice & { label: string };
 const listeners = new Set<() => void>();
@@ -25,18 +30,27 @@ function notify() {
   for (const l of listeners) l();
 }
 
-function read(key: string) {
+function read(key: string, legacyKey?: string) {
   try {
-    return window.localStorage.getItem(key);
+    const val = window.localStorage.getItem(key);
+    if (val !== null) return val;
+    if (legacyKey) {
+      return window.localStorage.getItem(legacyKey);
+    }
+    return null;
   } catch {
     return null;
   }
 }
 
-function write(key: string, value: string | null) {
+function write(key: string, value: string | null, legacyKey?: string) {
   try {
-    if (value === null) window.localStorage.removeItem(key);
-    else window.localStorage.setItem(key, value);
+    if (value === null) {
+      window.localStorage.removeItem(key);
+      if (legacyKey) window.localStorage.removeItem(legacyKey);
+    } else {
+      window.localStorage.setItem(key, value);
+    }
   } catch {
     // Private mode or quota: keep working in memory only.
     memory.set(key, value);
@@ -46,32 +60,32 @@ function write(key: string, value: string | null) {
 
 const memory = new Map<string, string | null>();
 
-function snapshot(key: string) {
-  return memory.has(key) ? memory.get(key) ?? null : read(key);
+function snapshot(key: string, legacyKey?: string) {
+  return memory.has(key) ? memory.get(key) ?? null : read(key, legacyKey);
 }
 
 export function saveProfile(p: RunnerProfile) {
-  write(PROFILE_KEY, JSON.stringify(p));
+  write(PROFILE_KEY, JSON.stringify(p), LEGACY_PROFILE_KEY);
 }
 
 export function clearProfile() {
-  write(PROFILE_KEY, null);
+  write(PROFILE_KEY, null, LEGACY_PROFILE_KEY);
 }
 
 export function saveRace(race: StoredRace) {
-  write(RACE_KEY, JSON.stringify(race));
+  write(RACE_KEY, JSON.stringify(race), LEGACY_RACE_KEY);
 }
 
 export function clearRace() {
-  write(RACE_KEY, null);
+  write(RACE_KEY, null, LEGACY_RACE_KEY);
 }
 
 export function saveGoal(goal: GoalId) {
-  write(GOAL_KEY, goal);
+  write(GOAL_KEY, goal, LEGACY_GOAL_KEY);
 }
 
 export function useStoredProfile(): RunnerProfile | null {
-  const raw = useSyncExternalStore(subscribe, () => snapshot(PROFILE_KEY), () => null);
+  const raw = useSyncExternalStore(subscribe, () => snapshot(PROFILE_KEY, LEGACY_PROFILE_KEY), () => null);
   return useMemo(() => {
     if (!raw) return null;
     try {
@@ -84,7 +98,7 @@ export function useStoredProfile(): RunnerProfile | null {
 }
 
 export function useStoredRace(): StoredRace | null {
-  const raw = useSyncExternalStore(subscribe, () => snapshot(RACE_KEY), () => null);
+  const raw = useSyncExternalStore(subscribe, () => snapshot(RACE_KEY, LEGACY_RACE_KEY), () => null);
   return useMemo(() => {
     if (!raw) return null;
     try {
@@ -97,6 +111,6 @@ export function useStoredRace(): StoredRace | null {
 }
 
 export function useStoredGoal(): GoalId {
-  const raw = useSyncExternalStore(subscribe, () => snapshot(GOAL_KEY), () => null);
+  const raw = useSyncExternalStore(subscribe, () => snapshot(GOAL_KEY, LEGACY_GOAL_KEY), () => null);
   return raw === "safe" || raw === "stretch" ? raw : "model";
 }
