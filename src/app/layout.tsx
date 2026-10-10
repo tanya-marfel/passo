@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Rival Run",
-  description: "Turn a Garmin history into a rival and race Lavaredo Ultra Trail 120K with a live coach.",
+  description: "Name a race, bring a Garmin history, and get a live coach on the published route.",
 };
 
 export const viewport: Viewport = {

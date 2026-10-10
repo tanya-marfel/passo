@@ -1,6 +1,6 @@
 # Rival Run
 
-**Race the runner you used to be.** You name the race (Lavaredo, UTMB, CCC, Western States, or a distance and the climbing) and add a Garmin history. Rival Run writes a short report, then simulates the run while Marmo speaks the calls that would have changed the result. Lavaredo uses the official track. Other races use a sketch built from the distance and climb.
+**Race the runner you used to be.** You type what you are running. Rival Run looks up the published route, then a Garmin history becomes a short report and a simulation where Marmo speaks the calls that would have changed the result.
 
 Built for an agentic AI hackathon with Google DeepMind Gemini (agent brain), Gradium (voice) and Entire (agent session checkpoints).
 
@@ -8,8 +8,8 @@ Built for an agentic AI hackathon with Google DeepMind Gemini (agent brain), Gra
 
 1. **Sign in with Garmin.** The button sends you to Garmin Connect. You sign in to your account there, allow RaceIQ to read your activities, and come back. Rival Run never sees your password. From the runs Garmin delivers, it fits a personal pace model (flat pace, climbing speed, descent skill, fatigue curve) and detects recurring mistakes: fast starts, attacking long climbs then stalling, late fades, under-fuelling, lingering at aid stations, braking on descents and heart-rate drift. It also notes if you have never run this long or in the dark.
 2. **Meet your Shadow.** Each mistake becomes one of the Shadow's moves ("Fast Start", "Reckless Climb", "Empty Tank", ...), with the evidence from your runs and Marmo's counter.
-3. **Plan Lavaredo.** The official 120K GPX with race-book aid stations and cut-offs gives you an even-effort plan for a Safe, "Your data" or Stretch goal, the cut-off margins, and the Shadow's projected race.
-4. **Race it live.** The race clock starts on Friday at 23:00 in Cortina. The simulated runner carries your habits unless Marmo talks you out of them. Climbs are gyms with badges, energy is an HP bar, aid stations restore energy, and cramps, storms and the night low are status effects.
+3. **Plan the route that was looked up.** Distance, climb, aid stations and cut-offs come from the published page. You get an even-effort plan for a Safe, "Your data" or Stretch goal, the cut-off margins, and the Shadow's projected race.
+4. **Race it live.** The clock starts at the published start time. The simulated runner carries your habits unless Marmo talks you out of them. Climbs are gyms with badges, energy is an HP bar, aid stations restore energy, and cramps, storms and the night low are status effects.
 5. **Marmo, the agent.** Race events (climb ahead, summit, aid station, low energy, Shadow passing, pace drift, cut-off risk, 02:30 low, sunrise, cramp, storm, or your own question) trigger the agent. It calls tools to read your live status, the course ahead and your personal patterns, can `replan` with exact projections, and then decides to `speak` or `stay_silent`. Its actions (eat, salt, caffeine, jacket, quick aid stop, pace the climb, easy start, effort change for N minutes) are applied to the runner when **Follow Marmo** is on. Switch it off and watch the runner turn into the Shadow.
 6. **Voice.** Marmo speaks with Gradium text-to-speech. Tap the mic to ask a question with Gradium speech-to-text.
 
@@ -52,7 +52,7 @@ To turn that button on, register RaceIQ once in the [Garmin Connect Developer Pr
 
 ## Demo script (about 3 minutes)
 
-1. Say or type the race, for example "Lavaredo 120K next June", and click **Sample runner** (or drop a Garmin export).
+1. Type what you are running, for example "Lavaredo 80K", press **Look up**, and click **Sample runner** (or drop a Garmin export).
 2. Read the report. Pick a goal and click **Simulate**.
 3. Click **Start**: Marmo briefs you out loud, and the shadow runs the mistakes from the history.
 4. At the first gym Marmo tells you how to pace the climb; at the summit you earn a badge.
@@ -104,6 +104,6 @@ npm run build:course # rebuild the course data from the official GPX
 
 ## Notes
 
-- Course: official Lavaredo Ultra Trail 120K GPX and race-book aid stations and cut-offs for 2026. The 2027 route may change slightly.
+- The route is fetched from the published race page when you type a name. A saved answer does not skip that prompt.
 - The race is simulated from your history. It is not medical advice.
 - Marmo and the Shadow are original characters. The game styling is inspired by retro creature-battle RPGs and uses no third-party characters, names, art or sounds. Pixel headings use Press Start 2P (SIL Open Font License).

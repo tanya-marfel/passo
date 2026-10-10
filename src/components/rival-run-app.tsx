@@ -18,20 +18,25 @@ export function RivalRunApp() {
   const garminFlag = useSearchFlag("garmin");
   const garminReason = useSearchFlag("reason");
   const [racing, setRacing] = useState(false);
-  const active = bindRace(race);
+  // A saved race must not skip the prompt. The field stays up until this visit submits one.
+  const [picked, setPicked] = useState(false);
+  const active = picked ? bindRace(race) : null;
   const plan = useMemo(() => (profile && active ? buildPlan(profile, goal) : null), [profile, goal, active]);
 
-  if (garminFlag || !profile || !race || !plan) {
+  if (!picked || garminFlag || !profile || !race || !plan) {
     return (
       <ImportScreen
         status={status}
         garminFlag={garminFlag}
         garminReason={garminReason}
         runs={profile?.activityCount ?? null}
-        raceLabel={race?.label ?? null}
+        raceLabel={picked ? (race?.label ?? null) : null}
         onProfile={saveProfile}
         onGarminDone={finishGarminReturn}
-        onRace={(choice, label) => saveRace({ ...choice, label })}
+        onRace={(choice, label) => {
+          saveRace({ ...choice, label });
+          setPicked(true);
+        }}
       />
     );
   }
@@ -48,12 +53,14 @@ export function RivalRunApp() {
       onStart={() => setRacing(true)}
       onChangeRace={() => {
         clearRace();
+        setPicked(false);
         setRacing(false);
       }}
       onNewData={() => {
         void fetch("/api/garmin/session", { method: "DELETE" }).catch(() => undefined);
         clearProfile();
         clearRace();
+        setPicked(false);
         setRacing(false);
       }}
     />

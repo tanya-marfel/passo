@@ -7,7 +7,7 @@ import { cn } from "cn";
 import { buildProfile, type RunnerProfile } from "@/lib/profile";
 import { sampleActivities } from "@/lib/sample";
 import { importFiles, type Activity } from "@/lib/garmin";
-import { interpretRace, type RaceChoice } from "@/lib/races";
+import type { RaceChoice } from "@/lib/races";
 import { clearSearchFlags } from "@/lib/search-flag";
 import type { PartnerStatus } from "@/hooks/use-partner-status";
 import { useListener } from "@/hooks/use-voice";
@@ -25,8 +25,6 @@ type SyncBody = {
   message?: string | null;
   error?: string;
 };
-
-const IDEAS = ["Lavaredo 120K next June", "UTMB", "CCC", "Western States"];
 
 export function ImportScreen({
   status,
@@ -54,15 +52,38 @@ export function ImportScreen({
   const [dragging, setDragging] = useState(false);
   const [line, setLine] = useState("");
   const [ask, setAsk] = useState<string | null>(null);
-  const submitRace = (text: string) => {
-    const res = interpretRace(text);
-    if ("ask" in res) {
-      setAsk(res.ask);
+  const [looking, setLooking] = useState(false);
+  const submitRace = async (text: string) => {
+    const raw = text.trim();
+    if (raw.length < 2) {
+      setAsk("What are you running?");
       return;
     }
+    if (looking) return;
     setAsk(null);
-    setLine(res.label);
-    onRace(res.choice, res.label);
+    setError(null);
+    setLooking(true);
+    try {
+      const res = await fetch("/api/race", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text: raw }),
+      });
+      const body = (await res.json().catch(() => null)) as { ask?: string; error?: string; choice?: RaceChoice; label?: string } | null;
+      if (body?.ask) {
+        setAsk(body.ask);
+        return;
+      }
+      if (!res.ok || !body?.choice?.course || !body.label) {
+        setError(body?.error || "I couldn't find a published route for that.");
+        return;
+      }
+      onRace(body.choice, body.label);
+    } catch {
+      setError("The lookup didn't finish. Try again.");
+    } finally {
+      setLooking(false);
+    }
   };
   const listener = useListener(Boolean(status?.gradium), (text) => {
     setLine(text);
@@ -165,7 +186,7 @@ export function ImportScreen({
       <main className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center px-5 py-12 sm:px-6">
         <h1 className="text-3xl font-medium tracking-tight text-balance">What are you running?</h1>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          Say what you are up to, then add a Garmin history. You get a short report, then a simulation where Marmo talks you through the parts that usually go wrong.
+          Type what you are running. The published route is looked up from that, then a Garmin history turns it into a report and a simulation.
         </p>
 
         <form
@@ -183,23 +204,26 @@ export function ImportScreen({
               placeholder="What are you up to?"
               aria-label="What are you running?"
               autoComplete="off"
+              autoFocus
               onChange={(e) => setLine(e.target.value)}
             />
+            <Button type="submit" disabled={looking || line.trim().length < 2}>
+              Look up
+            </Button>
             {listener.available && (
               <Button type="button" variant="secondary" aria-label={listener.state === "recording" ? "Stop listening" : "Say what you are running"} onClick={listener.toggle}>
                 <Mic />
               </Button>
             )}
           </div>
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
-            {IDEAS.map((idea) => (
-              <button key={idea} type="button" className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline" onClick={() => submitRace(idea)}>
-                {idea.replace(" next June", "")}
-              </button>
-            ))}
-          </div>
+          {looking && (
+            <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
+              Looking up the published route…
+            </p>
+          )}
           {ask && <p className="mt-3 text-sm">{ask}</p>}
-          {raceLabel && !ask && <p className="mt-3 text-sm text-muted-foreground">Using {raceLabel}.</p>}
+          {raceLabel && !ask && !looking && <p className="mt-3 text-sm text-muted-foreground">Using {raceLabel}.</p>}
           {listener.state === "recording" && <p className="mt-2 text-xs text-muted-foreground">Listening…</p>}
         </form>
 
