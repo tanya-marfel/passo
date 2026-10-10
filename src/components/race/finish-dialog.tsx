@@ -6,7 +6,7 @@ import type { Plan } from "@/lib/plan";
 import type { RunnerProfile } from "@/lib/profile";
 import type { RaceView } from "@/lib/engine";
 import { fmtDuration, fmtHm } from "@/lib/format";
-import { BadgeIcon } from "@/components/sprites";
+import { BadgeIcon, MarmoSprite, RunnerSprite } from "@/components/sprites";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -51,8 +51,16 @@ export function FinishDialog({
     <Dialog open={view.showFinish} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-lg border border-white/15 bg-black/90 backdrop-blur-xl">
         <DialogHeader className="text-center sm:text-center">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-amber-400/10 text-amber-300 mb-2">
-            <Trophy className="size-6" />
+          <div className="mx-auto flex items-center justify-center gap-3 mb-2">
+            <div className="flex size-14 items-center justify-center rounded-2xl border border-emerald-500/30 bg-emerald-500/10 shadow-lg">
+              <RunnerSprite height={38} />
+            </div>
+            <div className="flex size-10 items-center justify-center rounded-full bg-amber-400/15 text-amber-300">
+              <Trophy className="size-5" />
+            </div>
+            <div className="flex size-14 items-center justify-center rounded-2xl border border-amber-500/30 bg-amber-500/10 shadow-lg">
+              <MarmoSprite height={38} />
+            </div>
           </div>
           <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
             Race Completed!

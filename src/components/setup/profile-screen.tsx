@@ -10,6 +10,7 @@ import { fmtClock, fmtDuration, fmtHm } from "@/lib/format";
 import type { PartnerStatus } from "@/hooks/use-partner-status";
 import { AppHeader } from "@/components/app-header";
 import { ElevationProfile } from "@/components/race/elevation-profile";
+import { MarmoSprite } from "@/components/sprites";
 import { Button } from "@/components/ui/button";
 
 const GOALS: { id: GoalId; label: string }[] = [
@@ -57,11 +58,19 @@ export function ProfileScreen({
         </button>
       </AppHeader>
       <main className="mx-auto w-full max-w-xl flex-1 px-5 py-10 sm:px-6">
-        <p className="text-sm text-muted-foreground">{course.startLocal}</p>
-        <h1 className="mt-1 text-3xl font-medium tracking-tight">{course.shortName}</h1>
-        <p className="mt-2 text-sm text-muted-foreground tabular-nums">
-          {course.totalKm} km · {Math.round(course.officialGainM).toLocaleString("en-GB")} m · {limitH} h limit · {course.location}
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm text-muted-foreground">{course.startLocal}</p>
+            <h1 className="mt-1 text-3xl font-medium tracking-tight">{course.shortName}</h1>
+            <p className="mt-2 text-sm text-muted-foreground tabular-nums">
+              {course.totalKm} km · {Math.round(course.officialGainM).toLocaleString("en-GB")} m · {limitH} h limit · {course.location}
+            </p>
+          </div>
+          <div className="hidden sm:flex flex-col items-center gap-1 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-2.5 shadow-md shrink-0">
+            <MarmoSprite height={46} />
+            <span className="text-[10px] font-mono font-bold text-amber-300">Marmo</span>
+          </div>
+        </div>
 
         <p className="mt-8 text-sm leading-relaxed">
           From {profile.activityCount} runs, a clean effort finishes around <span className="tabular-nums">{fmtDuration(plan.timeline.finishSec)}</span>. The shadow, with the mistakes in that history, takes{" "}

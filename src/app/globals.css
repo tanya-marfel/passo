@@ -130,7 +130,10 @@
     backdrop-filter: blur(10px);
   }
   .pixelated {
-    image-rendering: auto;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+    shape-rendering: crispEdges;
   }
   .hp-track {
     background: oklch(1 0 0 / 10%);
@@ -147,7 +150,35 @@
 @keyframes sprite-bob {
   0%,
   100% {
-    transform: none;
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes sprite-talk {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  25% {
+    transform: translateY(-3px) scale(1.03, 0.97);
+  }
+  75% {
+    transform: translateY(1px) scale(0.98, 1.02);
+  }
+}
+
+@keyframes shadow-flicker {
+  0%,
+  100% {
+    opacity: 0.95;
+    filter: drop-shadow(0 0 6px rgba(168, 85, 247, 0.7));
+  }
+  50% {
+    opacity: 0.75;
+    filter: drop-shadow(0 0 10px rgba(216, 180, 254, 0.9));
   }
 }
 
@@ -173,10 +204,14 @@
   }
 }
 
-.animate-bob,
-.animate-talk,
+.animate-bob {
+  animation: sprite-bob 1.2s steps(2) infinite;
+}
+.animate-talk {
+  animation: sprite-talk 0.35s steps(3) infinite;
+}
 .animate-flicker {
-  animation: none;
+  animation: shadow-flicker 1.8s ease-in-out infinite;
 }
 .animate-caret {
   animation: caret-blink 0.9s steps(1) infinite;

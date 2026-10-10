@@ -8,8 +8,6 @@ import {
   Compass,
   Cookie,
   Flag,
-  Ghost,
-  User,
 } from "lucide-react";
 import { cn } from "cn";
 import { course, TOTAL_M, climbAt, type AidStation } from "@/lib/course";
@@ -19,6 +17,7 @@ import type { RaceView } from "@/lib/engine";
 import type { StatusId } from "@/lib/live";
 import { fmtClock, fmtDuration, fmtHm } from "@/lib/format";
 import { StationBadge } from "@/components/race/station-pin";
+import { RunnerSprite, ShadowSprite } from "@/components/sprites";
 
 const STATUS: Record<StatusId, { label: string; className: string; bg: string }> = {
   cramp: { label: "Cramp", className: "text-red-300", bg: "bg-red-500/15 border-red-500/30" },
@@ -101,7 +100,14 @@ export function BattleDuelHUD({
         )}
         aria-label="Expand race telemetry"
       >
-        <span className="flex size-2 rounded-full bg-emerald-400 animate-pulse" />
+        <div className="flex items-center -space-x-1.5 shrink-0">
+          <div className="flex size-5 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/20 overflow-hidden">
+            <RunnerSprite height={16} />
+          </div>
+          <div className="flex size-5 items-center justify-center rounded-full border border-purple-500/40 bg-purple-500/20 overflow-hidden">
+            <ShadowSprite height={16} />
+          </div>
+        </div>
         <span className="font-semibold tabular-nums">km {runnerKm.toFixed(1)}</span>
         <span className="text-muted-foreground">·</span>
         <span className={shadowLeading ? "text-shadow" : "text-emerald-300"}>
@@ -121,14 +127,16 @@ export function BattleDuelHUD({
     >
       <div className="flex items-center justify-between gap-3 border-b border-white/8 pb-2">
         <div className="flex items-center gap-2">
-          <div className="flex size-5 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
-            <User className="size-3" />
+          <div className="flex size-7 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 overflow-hidden shrink-0 shadow-inner">
+            <RunnerSprite height={22} />
           </div>
           <span className="text-xs font-semibold tracking-tight text-foreground">{trainerName(profile)}</span>
-          <span className="text-[11px] text-muted-foreground">vs</span>
-          <div className="flex items-center gap-1 text-[11px] text-shadow">
-            <Ghost className="size-3" />
-            <span className="font-medium">Shadow Rival</span>
+          <span className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-widest px-0.5">vs</span>
+          <div className="flex items-center gap-1.5 text-xs text-shadow">
+            <div className="flex size-7 items-center justify-center rounded-lg border border-purple-500/30 bg-purple-500/10 overflow-hidden shrink-0 shadow-inner">
+              <ShadowSprite height={22} />
+            </div>
+            <span className="font-semibold">Shadow Rival</span>
           </div>
         </div>
         <div className="flex items-center gap-1.5">
@@ -243,8 +251,11 @@ export function ShadowBox({
     <div className={cn("hud-box rounded-xl border border-white/12 bg-black/75 p-3 shadow-xl backdrop-blur-md", className)}>
       <div className="min-w-0">
         <div className="flex items-baseline justify-between gap-3">
-          <span className="flex items-center gap-1 text-xs font-semibold text-shadow">
-            <Ghost className="size-3.5" /> Shadow · {trainerName(profile)}
+          <span className="flex items-center gap-1.5 text-xs font-semibold text-shadow">
+            <div className="flex size-5 items-center justify-center rounded-md border border-purple-500/30 bg-purple-500/10 overflow-hidden shrink-0 shadow-inner">
+              <ShadowSprite height={16} />
+            </div>
+            Shadow · {trainerName(profile)}
           </span>
           <span className="text-[10px] text-muted-foreground tabular-nums">km {km.toFixed(1)}</span>
         </div>
@@ -282,7 +293,12 @@ export function PlayerBox({
       <div>
         <div className="min-w-0">
           <div className="flex items-baseline justify-between gap-3">
-            <span className="text-xs font-semibold text-foreground">{trainerName(profile)}</span>
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+              <div className="flex size-5 items-center justify-center rounded-md border border-emerald-500/30 bg-emerald-500/10 overflow-hidden shrink-0 shadow-inner">
+                <RunnerSprite height={16} />
+              </div>
+              {trainerName(profile)}
+            </span>
             <span className="text-[11px] tabular-nums text-muted-foreground">
               km <span className="font-semibold text-foreground">{(view.d / 1000).toFixed(1)}</span> / {(TOTAL_M / 1000).toFixed(1)}
             </span>

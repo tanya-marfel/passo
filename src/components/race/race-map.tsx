@@ -303,16 +303,21 @@ export default function RaceMap({ getFrame, follow, onFollowChange, onFail, clas
       </div>
       {createPortal(
         <div className="pointer-events-none flex flex-col items-center">
-          <span className="mb-1 rounded bg-background/80 px-1.5 py-0.5 text-[10px] font-medium text-foreground">You</span>
-          <RunnerSprite height={28} />
-          <span className="-mt-1 h-1.5 w-6 rounded-full bg-black/40 blur-[1px]" />
+          <span className="mb-1 rounded-full border border-emerald-500/30 bg-black/75 px-2 py-0.5 text-[10px] font-semibold text-emerald-300 shadow-md backdrop-blur-sm">
+            You
+          </span>
+          <RunnerSprite height={34} />
+          <span className="-mt-1 h-1.5 w-7 rounded-full bg-black/60 blur-[1px]" />
         </div>,
         els.runner,
       )}
       {createPortal(
         <div className="pointer-events-none flex flex-col items-center">
-          <span className="mb-1 rounded bg-background/80 px-1.5 py-0.5 text-[10px] font-medium text-shadow">Shadow</span>
-          <ShadowSprite height={30} />
+          <span className="mb-1 rounded-full border border-purple-500/30 bg-black/75 px-2 py-0.5 text-[10px] font-semibold text-purple-300 shadow-md backdrop-blur-sm">
+            Shadow
+          </span>
+          <ShadowSprite height={34} />
+          <span className="-mt-1 h-1.5 w-7 rounded-full bg-purple-950/60 blur-[2px]" />
         </div>,
         els.shadow,
       )}

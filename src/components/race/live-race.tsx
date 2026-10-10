@@ -17,7 +17,7 @@ import { ElevationProfile } from "@/components/race/elevation-profile";
 import { SimControls } from "@/components/race/sim-controls";
 import { CoachPanel } from "@/components/race/coach-panel";
 import { FinishDialog } from "@/components/race/finish-dialog";
-import { BadgeIcon } from "@/components/sprites";
+import { BadgeIcon, MarmoSprite, RunnerSprite, ShadowSprite } from "@/components/sprites";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -177,7 +177,29 @@ export function LiveRace({
                     {course.totalKm} km · {Math.round(course.officialGainM).toLocaleString("en-GB")} m ascent · 8 gym climbs
                   </p>
 
-                  <div className="mt-4 grid grid-cols-2 gap-2 text-left">
+                  {/* Pokemon Trainer Matchup */}
+                  <div className="my-3 flex items-center justify-center gap-4 rounded-xl border border-white/8 bg-white/[0.02] p-2.5">
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="flex size-13 items-center justify-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 shadow-lg">
+                        <RunnerSprite height={34} />
+                      </div>
+                      <span className="text-[11px] font-semibold text-foreground">{profile.name?.trim() || "You"}</span>
+                    </div>
+
+                    <div className="flex flex-col items-center gap-0.5 px-1">
+                      <MarmoSprite height={30} />
+                      <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-amber-300">Coach</span>
+                    </div>
+
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="flex size-13 items-center justify-center rounded-xl border border-purple-500/30 bg-purple-500/10 shadow-lg">
+                        <ShadowSprite height={34} />
+                      </div>
+                      <span className="text-[11px] font-semibold text-shadow">Shadow Rival</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-left">
                     <div className="rounded-xl border border-white/8 bg-white/[0.03] p-2.5">
                       <div className="text-[11px] text-muted-foreground">Planned Finish</div>
                       <div className="text-base font-semibold tabular-nums text-foreground">

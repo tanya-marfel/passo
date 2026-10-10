@@ -95,11 +95,11 @@ export function CoachDialog({ view, idleText }: { view: RaceView; idleText: stri
       <div className="flex items-start gap-3">
         {/* Marmo Avatar */}
         <div className="relative shrink-0 pt-0.5">
-          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-1.5 shadow-inner">
-            <MarmoSprite height={38} talking={isTalking} />
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-1.5 shadow-md">
+            <MarmoSprite height={42} talking={isTalking} />
           </div>
           {thinking && (
-            <span className="absolute -bottom-1 -right-1 flex size-3.5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+            <span className="absolute -bottom-1 -right-1 flex size-3.5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow">
               <Loader2 className="size-2.5 animate-spin" />
             </span>
           )}
