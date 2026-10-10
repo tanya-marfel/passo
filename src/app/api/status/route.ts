@@ -1,4 +1,5 @@
 import { connection } from "next/server";
+import { gradiumVoiceId } from "@/lib/gradium";
 
 export async function GET() {
   await connection();
@@ -6,6 +7,6 @@ export async function GET() {
     gemini: Boolean(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY),
     geminiModel: process.env.GEMINI_MODEL || "auto",
     gradium: Boolean(process.env.GRADIUM_API_KEY),
-    voice: process.env.GRADIUM_VOICE_ID || "ubuXFxVQwVYnZQhy",
+    voice: gradiumVoiceId(),
   });
 }

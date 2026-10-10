@@ -1,7 +1,7 @@
+import { gradiumVoiceId } from "@/lib/gradium";
 import { speakable } from "@/lib/speech";
 
 const GRADIUM_TTS = "https://api.gradium.ai/api/post/speech/tts";
-const DEFAULT_VOICE = "ubuXFxVQwVYnZQhy";
 const cache = new Map<string, ArrayBuffer>();
 
 export async function POST(request: Request) {
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   }
   if (!text) return Response.json({ error: "Empty text" }, { status: 400 });
 
-  const voiceId = process.env.GRADIUM_VOICE_ID || DEFAULT_VOICE;
+  const voiceId = gradiumVoiceId();
   const cacheKey = `${voiceId}:${text}`;
   const hit = cache.get(cacheKey);
   if (hit) return new Response(hit, { headers: { "Content-Type": "audio/wav", "X-Voice-Cache": "hit" } });
@@ -30,7 +30,8 @@ export async function POST(request: Request) {
         voice_id: voiceId,
         output_format: "wav",
         only_audio: true,
-        json_config: JSON.stringify({ padding_bonus: -0.6 }),
+        // REST takes json_config as an object; the query-string form is only for STT.
+        json_config: { padding_bonus: -0.6 },
       }),
       signal: AbortSignal.timeout(20000),
     });

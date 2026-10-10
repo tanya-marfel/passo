@@ -32,7 +32,7 @@ Create `.env.local` (or add these as secrets in your hosting or Cursor Cloud Age
 GEMINI_API_KEY=...            # or GOOGLE_API_KEY; enables the Gemini agent
 GEMINI_MODEL=gemini-2.5-flash # optional; by default the newest Gemini Flash model is picked
 GRADIUM_API_KEY=...           # enables Gradium TTS and STT
-GRADIUM_VOICE_ID=...          # optional Gradium voice id for Marmo
+GRADIUM_VOICE_ID=...          # optional; defaults to the flagship voice "Russell" (_6Aslh2DxfmnRLmP)
 ```
 
 Without keys everything still works: Marmo runs on an offline rule engine that uses the same tools, and voice falls back to the browser's speech synthesis and recognition (Chrome works best). The header pills show which mode is active.

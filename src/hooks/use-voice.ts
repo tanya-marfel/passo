@@ -22,6 +22,7 @@ export function useSpeaker(gradium: boolean) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const tokenRef = useRef(0);
   const gradiumOk = useRef(true);
+  const gradiumFailures = useRef(0);
   const [speaking, setSpeaking] = useState(false);
   const [engine, setEngine] = useState<VoiceEngine | null>(null);
 
@@ -94,6 +95,7 @@ export function useSpeaker(gradium: boolean) {
             });
             try {
               await audio.play();
+              gradiumFailures.current = 0;
               setEngine("gradium");
               await ended;
               return "gradium";
@@ -104,6 +106,13 @@ export function useSpeaker(gradium: boolean) {
             }
           } else if (res && res.status === 501) {
             gradiumOk.current = false;
+          } else if (++gradiumFailures.current >= 2) {
+            gradiumOk.current = false;
+            const reason = await res
+              ?.json()
+              .then((j: { reason?: string }) => j.reason)
+              .catch(() => undefined);
+            toast.warning("Gradium voice is unavailable, so Marmo switched to the browser voice.", { description: reason });
           }
         }
         if (token !== tokenRef.current) return "none";
