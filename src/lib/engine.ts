@@ -453,7 +453,7 @@ export class RaceEngine {
     const onEvent = (e: CoachStreamEvent) => {
       if (epoch !== this.epoch) return;
       if (e.type === "start") update({ engine: e.engine, model: e.model });
-      else if (e.type === "step") update({ steps: [...turn.steps, e.step] });
+      else if (e.type === "step") update({ steps: [...(turn.steps ?? []), e.step] });
       this.emitNow();
     };
     let res: CoachResponse;
@@ -469,7 +469,7 @@ export class RaceEngine {
       applyCoachActions(this.s, res.actions);
       this.projAt = -Infinity;
     }
-    update({ status: "done", response: res, applied, steps: res.steps, engine: res.engine, model: res.model });
+    update({ status: "done", response: res, applied, steps: res.steps ?? turn.steps ?? [], engine: res.engine, model: res.model });
     this.ui.thinking = null;
 
     if (res.decision === "speak" && res.message) {

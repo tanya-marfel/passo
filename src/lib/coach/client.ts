@@ -9,7 +9,11 @@ export async function requestCoach(req: CoachRequest, onEvent: (e: CoachStreamEv
     signal,
   });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  if (!r.body || !r.headers.get("content-type")?.includes(COACH_STREAM_TYPE)) return (await r.json()) as CoachResponse;
+  if (!r.body || !r.headers.get("content-type")?.includes(COACH_STREAM_TYPE)) {
+    const res = (await r.json()) as Partial<CoachResponse>;
+    if (typeof res.decision !== "string" || !Array.isArray(res.actions)) throw new Error("The coach API returned an unexpected payload");
+    return { ...res, steps: res.steps ?? [] } as CoachResponse;
+  }
 
   const reader = r.body.getReader();
   const decoder = new TextDecoder();

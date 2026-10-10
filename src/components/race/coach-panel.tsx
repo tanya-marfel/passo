@@ -54,7 +54,8 @@ function toolMove(tool: string) {
 }
 
 function ThinkingState({ turn }: { turn: CoachTurn }) {
-  const last = turn.steps.at(-1);
+  const steps = turn.steps ?? [];
+  const last = steps.at(-1);
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -64,7 +65,7 @@ function ThinkingState({ turn }: { turn: CoachTurn }) {
         </span>
       </div>
       {last ? (
-        <div key={turn.steps.length} className="animate-rise">
+        <div key={steps.length} className="animate-rise">
           <p className="font-pixel text-[9px] leading-relaxed text-primary">Marmo used {toolMove(last.tool).move}!</p>
           <p className="text-xs text-muted-foreground">{toolMove(last.tool).doing}</p>
         </div>
@@ -199,6 +200,7 @@ function argText(args: Record<string, unknown>) {
 function TurnCard({ turn }: { turn: CoachTurn }) {
   const res = turn.response;
   const engine = res?.engine ?? turn.engine;
+  const steps = turn.steps ?? res?.steps ?? [];
   return (
     <div className="animate-rise rounded-lg border border-white/10 bg-white/[0.03] p-2.5 text-xs">
       <div className="flex items-center gap-2">
@@ -216,14 +218,14 @@ function TurnCard({ turn }: { turn: CoachTurn }) {
           </Badge>
           <span className="text-[10px] text-muted-foreground">
             {res
-              ? `${(res.latencyMs / 1000).toFixed(1)} s · ${res.steps.length} steps · ${res.decision === "speak" ? "spoke" : "stayed silent"}`
-              : `${turn.steps.length} step${turn.steps.length === 1 ? "" : "s"} so far…`}
+              ? `${(res.latencyMs / 1000).toFixed(1)} s · ${steps.length} steps · ${res.decision === "speak" ? "spoke" : "stayed silent"}`
+              : `${steps.length} step${steps.length === 1 ? "" : "s"} so far…`}
           </span>
         </div>
       )}
-      {turn.steps.length > 0 && (
+      {steps.length > 0 && (
         <ol className="mt-1.5 space-y-1">
-          {turn.steps.map((s, i) => (
+          {steps.map((s, i) => (
             <li key={i} className="animate-rise rounded bg-black/25 px-2 py-1 font-mono text-[10.5px] leading-snug">
               <span className={cn(s.tool === "speak" ? "text-primary" : s.tool === "stay_silent" ? "text-muted-foreground" : "text-sky-300")}>{s.tool}</span>
               <span className="text-muted-foreground">({argText(s.args)})</span>
