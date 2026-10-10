@@ -209,7 +209,7 @@ export function ImportScreen({
               onChange={(e) => setLine(e.target.value)}
             />
             <Button type="submit" disabled={looking || line.trim().length < 2}>
-              Look up
+              Run
             </Button>
             {listener.available && (
               <Button type="button" variant="secondary" aria-label={listener.state === "recording" ? "Stop listening" : "Say what you are running"} onClick={listener.toggle}>

@@ -49,7 +49,7 @@ Open [http://localhost:4590](http://localhost:4590).
 
 ## Demo Script (3-Minute Judge Walkthrough)
 
-1. On the launch screen, type `"Lavaredo 80K"` or `"Cortina Trail"`, click **Look up**, and select **Try the sample runner**.
+1. On the launch screen, type `"Lavaredo 80K"` or `"Cortina Trail"`, click **Run**, and select **Try the sample runner**.
 2. Review the athlete report and historical habit breakdown. Pick a goal (e.g. **Safe** or **Stretch**) and click **Simulate**.
 3. In the pre-race briefing card, review the Trainer vs Shadow Rival matchup and click **Start Race Simulation**.
 4. Marmo briefs you through your headphones. Watch the Shadow sprint ahead if you have a "Fast Start" habit.
