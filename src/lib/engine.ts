@@ -330,7 +330,8 @@ export class RaceEngine {
   // Loop ---------------------------------------------------------------------
 
   private tick = (now: number) => {
-    const dtReal = this.lastFrame ? Math.min(0.1, (now - this.lastFrame) / 1000) : 0;
+    // Up to 1 s per frame keeps the race speed honest on slow (software-rendered) maps; stepSim sub-steps internally.
+    const dtReal = this.lastFrame ? Math.min(1, (now - this.lastFrame) / 1000) : 0;
     this.lastFrame = now;
     if (this.ui.playing && !this.holding && !this.s.finished && dtReal > 0) {
       const prevT = this.s.t;

@@ -6,6 +6,7 @@ import { Map as MLMap, Marker, NavigationControl, setWorkerUrl, type ExpressionS
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { FeatureCollection, LineString } from "geojson";
 import { Box, Crosshair, Expand } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "cn";
 import { course, courseGeoJSON, lineBetween, lngLatAt, bearingAt, courseBounds, climbStartD, climbEndD } from "@/lib/course";
 import type { RaceFrame } from "@/lib/engine";
@@ -42,6 +43,22 @@ function lerpAngle(a: number, b: number, k: number) {
   return a + diff * k;
 }
 
+/** True when WebGL runs on the CPU (SwiftShader, llvmpipe), where 3D terrain renders at a few frames per second. */
+function softwareWebGL() {
+  try {
+    const gl = document.createElement("canvas").getContext("webgl2");
+    if (!gl) return false;
+    const ext = gl.getExtension("WEBGL_debug_renderer_info");
+    const renderer = String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
+    gl.getExtension("WEBGL_lose_context")?.loseContext();
+    return /swiftshader|llvmpipe|softpipe|software/i.test(renderer);
+  } catch {
+    return false;
+  }
+}
+
+const LOW_FPS = 12;
+
 export default function RaceMap({ getFrame, follow, onFollowChange, onFail, className }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -52,7 +69,9 @@ export default function RaceMap({ getFrame, follow, onFollowChange, onFail, clas
   const onFailRef = useRef(onFail);
   const onFollowRef = useRef(onFollowChange);
   const [ready, setReady] = useState(false);
-  const [terrain, setTerrain] = useState(true);
+  const [lowPower] = useState(softwareWebGL);
+  const [terrain, setTerrain] = useState(!lowPower);
+  const terrainRef = useRef(terrain);
   const [far, setFar] = useState(false);
   const [els] = useState(() => ({
     runner: document.createElement("div"),
@@ -65,7 +84,12 @@ export default function RaceMap({ getFrame, follow, onFollowChange, onFail, clas
     getFrameRef.current = getFrame;
     onFailRef.current = onFail;
     onFollowRef.current = onFollowChange;
-  }, [follow, getFrame, onFail, onFollowChange]);
+    terrainRef.current = terrain;
+  }, [follow, getFrame, onFail, onFollowChange, terrain]);
+
+  useEffect(() => {
+    if (lowPower) toast.info("3D terrain is off: this browser renders maps without a GPU.", { description: "Turn it back on with the cube button on the map." });
+  }, [lowPower]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -120,7 +144,7 @@ export default function RaceMap({ getFrame, follow, onFollowChange, onFail, clas
         },
         firstSymbol,
       );
-      map.setTerrain({ source: "dem", exaggeration: 1.35 });
+      if (terrainRef.current) map.setTerrain({ source: "dem", exaggeration: 1.35 });
       map.setSky({
         "sky-color": "#6ea8ff",
         "horizon-color": "#d6e6ff",
@@ -178,9 +202,22 @@ export default function RaceMap({ getFrame, follow, onFollowChange, onFail, clas
     const introUntil = performance.now() + 3300;
     const runner = markersRef.current?.runner;
     const shadow = markersRef.current?.shadow;
+    const fps = { from: 0, frames: 0, done: false };
 
     const tick = (now: number) => {
       const f = getFrameRef.current();
+      if (!fps.done && f.started && now > introUntil) {
+        fps.from ||= now;
+        fps.frames++;
+        if (now - fps.from > 4000) {
+          fps.done = true;
+          const rate = (fps.frames * 1000) / (now - fps.from);
+          if (rate < LOW_FPS && terrainRef.current) {
+            setTerrain(false);
+            toast.info(`3D terrain is off to keep the race smooth (${Math.round(rate)} fps).`, { description: "Turn it back on with the cube button on the map." });
+          }
+        }
+      }
       const ll = lngLatAt(f.d);
       runner?.setLngLat(ll);
       shadow?.setLngLat(lngLatAt(f.shadowD));
