@@ -88,8 +88,11 @@ export function LiveRace({
             {!view.started && (
               <div className="absolute inset-0 z-10 grid place-items-center bg-black/50 p-4">
                 <div className="rpg-box max-w-sm px-6 py-5 text-center">
-                  <p className="text-xs text-muted-foreground">Friday 25 June 2027, 23:00, Cortina</p>
-                  <h2 className="mt-2 text-xl font-medium tracking-tight">Ready when you are.</h2>
+                  <p className="text-xs text-muted-foreground">
+                    {course.startLocal}
+                    {course.location ? ` · ${course.location}` : ""}
+                  </p>
+                  <h2 className="mt-2 text-xl font-medium tracking-tight">{course.shortName}</h2>
                   <p className="mt-2 text-sm text-muted-foreground">
                     Plan {fmtDuration(plan.timeline.finishSec)}. Shadow {fmtDuration(plan.shadow.finishSec)}.
                   </p>

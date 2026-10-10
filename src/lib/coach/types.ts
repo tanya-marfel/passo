@@ -1,5 +1,6 @@
 import type { GoalId, PlanProfile } from "@/lib/plan";
 import type { RunnerProfile } from "@/lib/profile";
+import type { RaceChoice } from "@/lib/races";
 import type { SimEventType } from "@/lib/sim";
 
 export type CoachTrigger = {
@@ -36,6 +37,7 @@ export type CoachRequest = {
   profile: CoachProfile;
   goal: GoalId;
   targetSec?: number;
+  race?: RaceChoice;
   history: { role: "coach" | "runner"; text: string }[];
 };
 

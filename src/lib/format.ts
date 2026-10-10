@@ -1,4 +1,4 @@
-import { localClockSec } from "@/lib/course";
+import { localClockSec, startClockSec, startWeekday } from "@/lib/course";
 
 export function fmtDuration(sec: number, withSeconds = false) {
   const s = Math.max(0, Math.round(sec));
@@ -32,16 +32,17 @@ export function fmtPace(secPerKm: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
-const DAYS = ["Fri", "Sat", "Sun", "Mon"];
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /** Race clock seconds -> local wall clock, e.g. "Sat 04:30". */
 export function fmtClock(raceSec: number, withDay = true) {
   const c = localClockSec(raceSec);
   const h = Math.floor(c / 3600);
   const m = Math.floor((c % 3600) / 60);
-  const dayIdx = Math.floor((23 * 3600 + raceSec) / 86400);
+  const startDay = DAYS.indexOf(startWeekday());
+  const dayIdx = ((startDay < 0 ? 5 : startDay) + Math.floor((startClockSec() + raceSec) / 86400)) % 7;
   const hm = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-  return withDay ? `${DAYS[Math.min(DAYS.length - 1, dayIdx)]} ${hm}` : hm;
+  return withDay ? `${DAYS[dayIdx]} ${hm}` : hm;
 }
 
 export const fmtKm = (m: number, digits = 1) => `${(m / 1000).toFixed(digits)} km`;

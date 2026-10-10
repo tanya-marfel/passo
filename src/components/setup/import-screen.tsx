@@ -2,17 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mic } from "lucide-react";
 import { cn } from "cn";
 import { buildProfile, type RunnerProfile } from "@/lib/profile";
 import { sampleActivities } from "@/lib/sample";
-import { course } from "@/lib/course";
 import { importFiles, type Activity } from "@/lib/garmin";
+import { interpretRace, type RaceChoice } from "@/lib/races";
 import { clearSearchFlags } from "@/lib/search-flag";
 import type { PartnerStatus } from "@/hooks/use-partner-status";
+import { useListener } from "@/hooks/use-voice";
 import { AppHeader } from "@/components/app-header";
-import { ElevationProfile } from "@/components/race/elevation-profile";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const nextTick = () => new Promise((r) => setTimeout(r, 30));
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -25,24 +26,48 @@ type SyncBody = {
   error?: string;
 };
 
+const IDEAS = ["Lavaredo 120K next June", "UTMB", "CCC", "Western States"];
+
 export function ImportScreen({
   status,
   garminFlag,
   garminReason,
+  runs,
+  raceLabel,
   onProfile,
   onGarminDone,
+  onRace,
 }: {
   status: PartnerStatus | null;
   garminFlag: string | null;
   garminReason: string | null;
+  runs: number | null;
+  raceLabel: string | null;
   onProfile: (p: RunnerProfile) => void;
   onGarminDone: () => void;
+  onRace: (choice: RaceChoice, label: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [skipped, setSkipped] = useState<{ file: string; reason: string }[]>([]);
   const [dragging, setDragging] = useState(false);
+  const [line, setLine] = useState("");
+  const [ask, setAsk] = useState<string | null>(null);
+  const submitRace = (text: string) => {
+    const res = interpretRace(text);
+    if ("ask" in res) {
+      setAsk(res.ask);
+      return;
+    }
+    setAsk(null);
+    setLine(res.label);
+    onRace(res.choice, res.label);
+  };
+  const listener = useListener(Boolean(status?.gradium), (text) => {
+    setLine(text);
+    submitRace(text);
+  });
   const returnedError =
     garminFlag && garminFlag !== "connected"
       ? garminReason || (garminFlag === "denied" ? "You cancelled sign-in on Garmin." : "Garmin sign-in didn't finish.")
@@ -138,11 +163,47 @@ export function ImportScreen({
     <div className="flex min-h-dvh flex-col">
       <AppHeader status={status} />
       <main className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center px-5 py-12 sm:px-6">
-        <p className="text-sm text-muted-foreground">{course.name}</p>
-        <h1 className="mt-2 text-3xl font-medium tracking-tight text-balance">Race the runner you used to be.</h1>
+        <h1 className="text-3xl font-medium tracking-tight text-balance">Which race, and your runs.</h1>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          A Garmin history becomes a shadow that runs this course the way you usually do. Marmo calls the climbs as you go.
+          Say the race. Add a Garmin history. You get a short report, then a simulation where Marmo talks you through the parts that usually go wrong.
         </p>
+
+        <form
+          className="mt-8"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submitRace(line);
+          }}
+        >
+          <label htmlFor="race-line" className="text-sm">
+            The race
+          </label>
+          <div className="mt-2 flex gap-2">
+            <Input
+              id="race-line"
+              name="race"
+              value={line}
+              placeholder="I'm running Lavaredo next June"
+              autoComplete="off"
+              onChange={(e) => setLine(e.target.value)}
+            />
+            {listener.available && (
+              <Button type="button" variant="secondary" aria-label={listener.state === "recording" ? "Stop listening" : "Say the race"} onClick={listener.toggle}>
+                <Mic />
+              </Button>
+            )}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+            {IDEAS.map((idea) => (
+              <button key={idea} type="button" className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline" onClick={() => submitRace(idea)}>
+                {idea.replace(" next June", "")}
+              </button>
+            ))}
+          </div>
+          {ask && <p className="mt-3 text-sm">{ask}</p>}
+          {raceLabel && !ask && <p className="mt-3 text-sm text-muted-foreground">Using {raceLabel}.</p>}
+          {listener.state === "recording" && <p className="mt-2 text-xs text-muted-foreground">Listening…</p>}
+        </form>
 
         <div
           className={cn("mt-8 rounded-lg border px-5 py-8 text-center transition-colors", dragging ? "border-foreground/30 bg-white/[0.03]" : "border-white/10")}
@@ -164,8 +225,8 @@ export function ImportScreen({
             </p>
           ) : (
             <>
-              <p className="text-sm">Drop a Garmin export</p>
-              <p className="mt-1 text-sm text-muted-foreground">ZIP, FIT, GPX, or TCX. Read in the browser.</p>
+              <p className="text-sm">{runs ? `${runs} runs loaded` : "Your runs"}</p>
+              <p className="mt-1 text-sm text-muted-foreground">Drop a ZIP, FIT, GPX, or TCX. Read in the browser.</p>
               <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
                 <Button onClick={() => inputRef.current?.click()}>Choose files</Button>
                 <button type="button" className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline" onClick={() => void loadSample()}>
@@ -215,13 +276,6 @@ export function ImportScreen({
             <li>For a full history: account settings, data management, export your data. Drop the ZIP as is.</li>
           </ol>
         </details>
-
-        <div className="mt-10">
-          <ElevationProfile height={120} />
-          <p className="mt-1 text-xs text-muted-foreground tabular-nums">
-            {course.totalKm} km · {course.trackGainM.toLocaleString("en-GB")} m · {course.location}
-          </p>
-        </div>
       </main>
     </div>
   );

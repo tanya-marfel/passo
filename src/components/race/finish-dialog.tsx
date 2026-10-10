@@ -39,7 +39,7 @@ export function FinishDialog({
         <DialogHeader className="text-center sm:text-center">
           <DialogTitle className="text-lg font-medium">Finished</DialogTitle>
           <DialogDescription>
-            Cortina · {course.totalKm} km · {fmtHm(view.t)}
+            {course.shortName} · {course.totalKm} km · {fmtHm(view.t)}
           </DialogDescription>
         </DialogHeader>
         <div className="text-center">

@@ -1,5 +1,6 @@
 import { geminiCoach } from "@/lib/coach/gemini";
 import { offlineCoach } from "@/lib/coach/offline";
+import { ensureCoachCourse } from "@/lib/races";
 import { COACH_STREAM_TYPE, type CoachRequest, type CoachResponse, type CoachStreamEvent } from "@/lib/coach/types";
 
 const NO_KEY_NOTE = "No GEMINI_API_KEY set, using the offline coach.";
@@ -9,6 +10,7 @@ export async function POST(request: Request) {
   try {
     req = (await request.json()) as CoachRequest;
     if (!req?.trigger?.type || !req.live || !req.profile?.model) throw new Error("missing fields");
+    ensureCoachCourse(req.race);
   } catch {
     return Response.json({ error: "Invalid coach request" }, { status: 400 });
   }

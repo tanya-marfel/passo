@@ -31,9 +31,9 @@ type Props = {
 function gymsGeoJSON(): FeatureCollection<LineString> {
   return {
     type: "FeatureCollection",
-    features: course.climbs.map((c, i) => ({
+    features: course.climbs.map((c) => ({
       ...lineBetween(climbStartD(c), climbEndD(c)),
-      properties: { id: c.id, label: `GYM ${i + 1} · ${c.name.toUpperCase()}` },
+      properties: { id: c.id, label: c.name },
     })),
   };
 }

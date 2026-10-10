@@ -1,4 +1,4 @@
-import { course, GRADE, N_POINTS, STEP_M, TOTAL_M, isNight, localClockSec, type AidStation, type Climb } from "@/lib/course";
+import { climbSpans, course, GRADE, N_POINTS, STEP_M, TOTAL_M, isNight, localClockSec, stationAtPoint, type AidStation, type Climb } from "@/lib/course";
 import { clamp, fatigueFactor, paceRatio, type PaceModel } from "@/lib/cost";
 import type { PatternId, RunnerProfile } from "@/lib/profile";
 
@@ -40,9 +40,6 @@ export type Plan = {
   warnings: string[];
 };
 
-export const STATION_IDX: Map<number, AidStation> = new Map(
-  course.aidStations.map((s) => [Math.round((s.km * 1000) / STEP_M), s]),
-);
 
 export function planStopSec(s: AidStation) {
   const base = { start: 0, aid: 150, water: 60, checkpoint: 0, lifebase: 600, finish: 0 }[s.kind];
@@ -83,7 +80,7 @@ export function runTimeline(
   let t = opts.fromT ?? 0;
   arrive[from] = t;
   for (let i = from; i < N_POINTS - 1; i++) {
-    const st = STATION_IDX.get(i);
+    const st = stationAtPoint.get(i);
     if (st && !(i === from && opts.skipStopAtFrom)) {
       const s = stopFor(st);
       stops[st.id] = s;
@@ -103,14 +100,8 @@ function climbFrac(c: Climb, i: number) {
   return (e - c.baseEle) / Math.max(1, c.topEle - c.baseEle);
 }
 
-const CLIMB_IDX = course.climbs.map((c) => ({
-  c,
-  a: Math.round((c.startKm * 1000) / STEP_M),
-  b: Math.round((c.endKm * 1000) / STEP_M),
-}));
-
 export function climbAtIdx(i: number) {
-  return CLIMB_IDX.find((x) => i >= x.a && i <= x.b)?.c ?? null;
+  return climbSpans.find((x) => i >= x.a && i <= x.b)?.c ?? null;
 }
 
 /** Pace multiplier for "you making your usual mistakes". */
@@ -222,7 +213,7 @@ export function buildPlan(profile: PlanProfile, goal: GoalId = "model", customTa
   for (const sp of splits) {
     if (sp.marginSec !== null && sp.marginSec < 1800) warnings.push(`Only ${Math.round(sp.marginSec / 60)} min margin at ${sp.name} (${sp.cutoffSec ? "cut-off" : ""}).`);
   }
-  if (timeline.finishSec > course.timeLimitSec) warnings.push("This target is beyond the 30 hour limit.");
+  if (timeline.finishSec > course.timeLimitSec) warnings.push(`This target is past the ${Math.round(course.timeLimitSec / 3600)} hour limit.`);
 
   return {
     goal,
@@ -249,7 +240,7 @@ export function distanceAtTime(tl: Timeline, t: number) {
     if (a[mid] <= t) lo = mid;
     else hi = mid;
   }
-  const st = STATION_IDX.get(lo);
+  const st = stationAtPoint.get(lo);
   const depart = a[lo] + (st ? tl.stops[st.id] ?? 0 : 0);
   if (t <= depart) return lo * STEP_M;
   const frac = (t - depart) / Math.max(1e-6, a[lo + 1] - depart);
@@ -260,7 +251,7 @@ export function distanceAtTime(tl: Timeline, t: number) {
 export function timeAtDistance(tl: Timeline, d: number) {
   const x = clamp(d, 0, TOTAL_M) / STEP_M;
   const i = Math.min(N_POINTS - 2, Math.floor(x));
-  const st = STATION_IDX.get(i);
+  const st = stationAtPoint.get(i);
   const depart = tl.arrive[i] + (st ? tl.stops[st.id] ?? 0 : 0);
   const frac = x - i;
   if (frac <= 0) return tl.arrive[i];

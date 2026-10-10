@@ -55,6 +55,8 @@ export type CourseData = {
   sunriseLocalSec: number;
   sunsetLocalSec: number;
   source: { gpx: string; page: string; note: string };
+  /** True when the line is a sketch from distance and climb, not an official track. */
+  estimated?: boolean;
   stepM: number;
   lat: number[];
   lon: number[];
@@ -63,32 +65,65 @@ export type CourseData = {
   climbs: Climb[];
 };
 
-export const course = raw as CourseData;
+export let course = raw as CourseData;
 
-export const STEP_M = course.stepM;
-export const N_POINTS = course.ele.length;
-export const TOTAL_M = (N_POINTS - 1) * STEP_M;
-export const START_MS = Date.parse(course.startUtc);
+export let STEP_M = course.stepM;
+export let N_POINTS = course.ele.length;
+export let TOTAL_M = (N_POINTS - 1) * STEP_M;
+export let START_MS = Date.parse(course.startUtc);
+export let GRADE: number[] = [];
+let CUM_UP: number[] = [0];
+let CUM_DOWN: number[] = [0];
+/** Aid station whose snapped course index is i, if any. */
+export let stationAtPoint = new Map<number, AidStation>();
+export let climbSpans: { c: Climb; a: number; b: number }[] = [];
 
-/** Grade (fraction) per step i -> i+1, smoothed over +-100 m. */
-export const GRADE: number[] = (() => {
+export type ActiveRace = { id: string; spec?: unknown };
+let activeChoice: ActiveRace | null = null;
+
+function recompute() {
+  STEP_M = course.stepM || 50;
+  N_POINTS = course.ele.length;
+  TOTAL_M = Math.max(0, (N_POINTS - 1) * STEP_M);
+  START_MS = Date.parse(course.startUtc);
   const g: number[] = [];
   const w = 2;
   for (let i = 0; i < N_POINTS - 1; i++) {
     const a = Math.max(0, i - w);
     const b = Math.min(N_POINTS - 1, i + 1 + w);
-    g.push((course.ele[b] - course.ele[a]) / ((b - a) * STEP_M));
+    g.push((course.ele[b] - course.ele[a]) / Math.max(1, (b - a) * STEP_M));
   }
-  return g;
-})();
+  GRADE = g;
+  const up = [0];
+  const down = [0];
+  for (let i = 1; i < N_POINTS; i++) {
+    const d = course.ele[i] - course.ele[i - 1];
+    up.push(up[i - 1] + Math.max(0, d));
+    down.push(down[i - 1] + Math.max(0, -d));
+  }
+  CUM_UP = up;
+  CUM_DOWN = down;
+  stationAtPoint = new Map(course.aidStations.map((s) => [Math.round((s.km * 1000) / STEP_M), s]));
+  climbSpans = course.climbs.map((c) => ({
+    c,
+    a: Math.round((c.startKm * 1000) / STEP_M),
+    b: Math.round((c.endKm * 1000) / STEP_M),
+  }));
+}
 
-/** Cumulative gain / loss (m) up to point i. */
-const CUM_UP: number[] = [0];
-const CUM_DOWN: number[] = [0];
-for (let i = 1; i < N_POINTS; i++) {
-  const d = course.ele[i] - course.ele[i - 1];
-  CUM_UP.push(CUM_UP[i - 1] + Math.max(0, d));
-  CUM_DOWN.push(CUM_DOWN[i - 1] + Math.max(0, -d));
+recompute();
+
+/** Point the sim, plan and coach at a course. Safe to call again with the same object. */
+export function activateCourse(next: CourseData, choice: ActiveRace | null = null) {
+  if (course !== next) {
+    course = next;
+    recompute();
+  }
+  activeChoice = choice;
+}
+
+export function activeRace() {
+  return activeChoice;
 }
 
 export const clampD = (d: number) => Math.max(0, Math.min(TOTAL_M, d));
@@ -189,10 +224,24 @@ export function terrainAhead(d: number, distanceM: number) {
   return chunks;
 }
 
+/** Seconds from local midnight at the start gun, parsed from startLocal. */
+export function startClockSec() {
+  const m = /(\d{1,2}):(\d{2})/.exec(course.startLocal);
+  return m ? Number(m[1]) * 3600 + Number(m[2]) * 60 : 0;
+}
+
+export function startWeekday() {
+  return /^(Sun|Mon|Tue|Wed|Thu|Fri|Sat)/.exec(course.startLocal)?.[1] ?? "Fri";
+}
+
+/** Race-clock seconds when the local clock next reads `localSec`. */
+export function raceSecAtLocal(localSec: number) {
+  return (localSec - startClockSec() + 86400) % 86400;
+}
+
 /** Local time-of-day in seconds for a race clock value. */
 export function localClockSec(raceSec: number) {
-  const startLocal = 23 * 3600;
-  return (startLocal + raceSec) % 86400;
+  return (startClockSec() + raceSec) % 86400;
 }
 
 export function isNight(raceSec: number) {

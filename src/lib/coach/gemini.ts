@@ -1,4 +1,5 @@
 import { course } from "@/lib/course";
+import { ensureCoachCourse } from "@/lib/races";
 import { fmtClock, fmtDuration, fmtHm } from "@/lib/format";
 import type { CoachAction, CoachRequest, CoachResponse, CoachStep, CoachStreamEvent } from "@/lib/coach/types";
 import { TOOL_DECLARATIONS, makeToolContext, runTool } from "@/lib/coach/tools";
@@ -48,14 +49,14 @@ export async function pickGeminiModel(key: string): Promise<string> {
 function systemPrompt(req: CoachRequest) {
   const p = req.profile;
   return [
-    `You are Marmo, a cheerful marmot trail-running coach in Rival Run, a race companion styled like a retro creature-battle RPG with original characters. Never name real game franchises or their creatures.`,
-    `You coach ${p.name} (${p.type.name}, level ${p.level}) live through earbuds during the ${course.name}: Cortina d'Ampezzo, start Friday 23:00, ${course.totalKm} km on the official track, about ${course.officialGainM} m of climbing, 30 hour limit.`,
-    `Their rival is the Shadow: a ghost of themselves that makes their usual mistakes, built from their Garmin history.`,
+    `You are Marmo, a trail-running coach speaking into the runner's ear. Never name real game franchises.`,
+    `You coach ${p.name} during ${course.name} (${course.location}). Start ${course.startLocal}. ${course.totalKm} km, about ${Math.round(course.officialGainM).toLocaleString("en-GB")} m of climbing, ${Math.round(course.timeLimitSec / 3600)} hour limit.${course.estimated ? " The course line is a sketch from the distance and climb, not an official GPX, so talk about climbs and cut-offs, not place names you were not given." : ""}`,
+    `Their rival is the Shadow: the same runner making the mistakes in their history.`,
     `Each turn you get one EVENT and a live SNAPSHOT. Work like a real coach:`,
     `1. Use tools to check what matters: get_race_status, get_course_ahead, get_personal_patterns, and replan whenever you want to change effort or stop time (it returns exact projected numbers).`,
     `2. End the turn with exactly one terminal tool: speak, or stay_silent when nothing is actionable. Do not nag: routine check-ins are usually silent.`,
     `When you speak: one or two short sentences, at most 40 words, personal (cite their own history briefly, like "you faded 19% in your long runs"), and only numbers that came from tools. Never invent times, distances or cut-offs.`,
-    `Write for a tired runner listening, not reading: say "metres per hour" and "minutes", no markdown, no emojis, no lists. Light game flavour (gyms, badges, the Shadow) is welcome, but safety and clarity come first.`,
+    `Write for a tired runner listening, not reading: say "metres per hour" and "minutes", no markdown, no emojis, no lists. Safety and clarity come first.`,
     `If the runner reports chest pain, dizziness, confusion or an injury beyond a cramp, tell them to walk to the next aid station and see the medical team.`,
   ].join("\n");
 }
@@ -100,6 +101,7 @@ async function generate(key: string, model: string, body: Record<string, unknown
 const ACTIONS = new Set(["eat", "salt", "caffeine", "layer_up", "quick_aid", "pace_climb", "easy_start"]);
 
 export async function geminiCoach(req: CoachRequest, key: string, onEvent?: (e: CoachStreamEvent) => void): Promise<CoachResponse> {
+  ensureCoachCourse(req.race);
   const t0 = Date.now();
   const model = await pickGeminiModel(key);
   onEvent?.({ type: "start", engine: "gemini", model });
@@ -132,6 +134,7 @@ export async function geminiCoach(req: CoachRequest, key: string, onEvent?: (e: 
       let json;
       try {
         json = await generate(key, model, body);
+        ensureCoachCourse(req.race);
       } catch (err) {
         if (useThinking && err instanceof Error && /thinking/i.test(err.message)) {
           useThinking = false;

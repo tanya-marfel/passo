@@ -19,6 +19,7 @@ import { buildPlan, timeAtDistance, runTimeline, raceBeta, planStopSec, type Pla
 import { fmtClock, fmtDuration, fmtHm, fmtPace } from "@/lib/format";
 import { clamp } from "@/lib/cost";
 import type { PatternId } from "@/lib/profile";
+import { ensureCoachCourse } from "@/lib/races";
 import type { CoachAction, CoachRequest } from "@/lib/coach/types";
 
 export type ToolContext = {
@@ -238,7 +239,7 @@ export const TOOL_DECLARATIONS = [
   {
     name: "get_course_ahead",
     description:
-      "Terrain, next aid station, next cut-off and the next climb ('gym') ahead of the runner on the Lavaredo course, with planned and projected arrival times.",
+      "Terrain, the next aid station, the next cut-off and the next climb ahead of the runner, with planned and projected arrival times.",
     parameters: {
       type: "object",
       properties: { distance_km: { type: "number", description: "How far ahead to look, 1-25 km." } },
@@ -309,6 +310,7 @@ export const TOOL_DECLARATIONS = [
 ];
 
 export function runTool(ctx: ToolContext, name: string, args: Record<string, unknown>) {
+  ensureCoachCourse(ctx.req.race);
   switch (name) {
     case "get_course_ahead":
       return getCourseAhead(ctx, args as { distance_km?: number });

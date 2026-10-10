@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { buildPlan } from "@/lib/plan";
-import { clearProfile, saveGoal, saveProfile, useStoredGoal, useStoredProfile } from "@/lib/profile-store";
+import { clearProfile, clearRace, saveGoal, saveProfile, saveRace, useStoredGoal, useStoredProfile, useStoredRace } from "@/lib/profile-store";
+import { bindRace } from "@/lib/races";
 import { useSearchFlag } from "@/lib/search-flag";
 import { usePartnerStatus } from "@/hooks/use-partner-status";
 import { finishGarminReturn, ImportScreen } from "@/components/setup/import-screen";
@@ -11,21 +12,26 @@ import { LiveRace } from "@/components/race/live-race";
 
 export function RivalRunApp() {
   const profile = useStoredProfile();
+  const race = useStoredRace();
   const goal = useStoredGoal();
   const status = usePartnerStatus();
   const garminFlag = useSearchFlag("garmin");
   const garminReason = useSearchFlag("reason");
   const [racing, setRacing] = useState(false);
-  const plan = useMemo(() => (profile ? buildPlan(profile, goal) : null), [profile, goal]);
+  const active = bindRace(race);
+  const plan = useMemo(() => (profile && active ? buildPlan(profile, goal) : null), [profile, goal, active]);
 
-  if (garminFlag || !profile || !plan) {
+  if (garminFlag || !profile || !race || !plan) {
     return (
       <ImportScreen
         status={status}
         garminFlag={garminFlag}
         garminReason={garminReason}
+        runs={profile?.activityCount ?? null}
+        raceLabel={race?.label ?? null}
         onProfile={saveProfile}
         onGarminDone={finishGarminReturn}
+        onRace={(choice, label) => saveRace({ ...choice, label })}
       />
     );
   }
@@ -39,11 +45,15 @@ export function RivalRunApp() {
       goal={goal}
       status={status}
       onGoal={saveGoal}
-      onRename={(name) => saveProfile({ ...profile, name })}
       onStart={() => setRacing(true)}
+      onChangeRace={() => {
+        clearRace();
+        setRacing(false);
+      }}
       onNewData={() => {
         void fetch("/api/garmin/session", { method: "DELETE" }).catch(() => undefined);
         clearProfile();
+        clearRace();
         setRacing(false);
       }}
     />

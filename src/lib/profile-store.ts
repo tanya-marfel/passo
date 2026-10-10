@@ -3,9 +3,13 @@
 import { useMemo, useSyncExternalStore } from "react";
 import type { RunnerProfile } from "@/lib/profile";
 import type { GoalId } from "@/lib/plan";
+import type { RaceChoice } from "@/lib/races";
 
 const PROFILE_KEY = "rival-run.profile.v1";
 const GOAL_KEY = "rival-run.goal.v1";
+const RACE_KEY = "rival-run.race.v1";
+
+export type StoredRace = RaceChoice & { label: string };
 const listeners = new Set<() => void>();
 
 function subscribe(cb: () => void) {
@@ -54,6 +58,14 @@ export function clearProfile() {
   write(PROFILE_KEY, null);
 }
 
+export function saveRace(race: StoredRace) {
+  write(RACE_KEY, JSON.stringify(race));
+}
+
+export function clearRace() {
+  write(RACE_KEY, null);
+}
+
 export function saveGoal(goal: GoalId) {
   write(GOAL_KEY, goal);
 }
@@ -65,6 +77,19 @@ export function useStoredProfile(): RunnerProfile | null {
     try {
       const p = JSON.parse(raw) as RunnerProfile;
       return p?.model && Array.isArray(p.patterns) ? p : null;
+    } catch {
+      return null;
+    }
+  }, [raw]);
+}
+
+export function useStoredRace(): StoredRace | null {
+  const raw = useSyncExternalStore(subscribe, () => snapshot(RACE_KEY), () => null);
+  return useMemo(() => {
+    if (!raw) return null;
+    try {
+      const r = JSON.parse(raw) as StoredRace;
+      return r?.id && r.label ? r : null;
     } catch {
       return null;
     }

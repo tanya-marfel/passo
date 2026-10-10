@@ -1,4 +1,5 @@
-import { course, nextStation, stationD, climbStartD, climbEndD, rangeStats, localClockSec, TOTAL_M } from "@/lib/course";
+import { course, nextStation, stationD, climbStartD, climbEndD, rangeStats, localClockSec, raceSecAtLocal, TOTAL_M } from "@/lib/course";
+import { ensureCoachCourse } from "@/lib/races";
 import { timeAtDistance, distanceAtTime, type Plan } from "@/lib/plan";
 import { fmtDuration, fmtHm, fmtPace } from "@/lib/format";
 import type { CoachAction, CoachRequest, CoachResponse, CoachStep } from "@/lib/coach/types";
@@ -102,11 +103,12 @@ function decide(ctx: ToolContext, steps: CoachStep[]): Draft {
       call(steps, "get_personal_patterns", { topic: "pacing" }, () => getPersonalPatterns(ctx, { topic: "pacing" }));
       call(steps, "get_course_ahead", { distance_km: 8 }, () => getCourseAhead(ctx, { distance_km: 8 }));
       const pace = fmtPace(profile.model.flatPace * plan.effortScale * 1.08);
+      const first = course.climbs[0]?.name ?? "the first climb";
       if (fast) ctx.actions.push({ type: "easy_start" });
       return {
         message: fast
-          ? `Lavaredo is on. Your shadow will sprint off with Fast Start, so let it go. Flats at ${pace} or slower and hike the Night Ridge. Gel every 35 minutes.`
-          : `Lavaredo is on. First hour should feel too easy: flats at ${pace}, hike the Night Ridge, and a gel every 35 minutes.`,
+          ? `${course.shortName} is on. Your shadow will go out too fast, so let it go. Flats at ${pace} or slower, and hike ${first}. Gel every 35 minutes.`
+          : `${course.shortName} is on. The first hour should feel easy: flats at ${pace}, hike ${first}, and a gel every 35 minutes.`,
         tone: "calm",
       };
     }
@@ -298,7 +300,7 @@ function decide(ctx: ToolContext, steps: CoachStep[]): Draft {
     case "night_low": {
       call(steps, "get_personal_patterns", { topic: "night" }, () => getPersonalPatterns(ctx, { topic: "night" }));
       ctx.actions.push({ type: "caffeine" });
-      const sunriseT = (course.sunriseLocalSec - 23 * 3600 + 86400) % 86400;
+      const sunriseT = raceSecAtLocal(course.sunriseLocalSec);
       const offset = live.t - timeAtDistance(plan.timeline, live.d);
       const dAtSunrise = distanceAtTime(plan.timeline, sunriseT - offset);
       const near = [...course.aidStations].sort((a, b) => Math.abs(stationD(a) - dAtSunrise) - Math.abs(stationD(b) - dAtSunrise))[0];
@@ -309,7 +311,7 @@ function decide(ctx: ToolContext, steps: CoachStep[]): Draft {
       };
     }
     case "sunrise":
-      return { message: "Sunrise over the Dolomites. Headlamp off at the next stop, sunglasses on, and enjoy this one.", tone: "celebrate" };
+      return { message: "Sunrise. Headlamp off at the next stop, sunglasses on, and take this one in.", tone: "celebrate" };
     case "heat": {
       call(steps, "get_personal_patterns", { topic: "fueling" }, () => getPersonalPatterns(ctx, { topic: "fueling" }));
       return {
@@ -342,7 +344,7 @@ function decide(ctx: ToolContext, steps: CoachStep[]): Draft {
     case "finish": {
       const sec = Number(d.sec);
       return {
-        message: `You're a Lavaredo finisher in ${fmtDuration(sec)}! Your shadow would still be out there for ${fmtHm(Math.max(0, plan.shadow.finishSec - sec))}.`,
+        message: `You're done in ${fmtDuration(sec)}. The shadow would still be out for ${fmtHm(Math.max(0, plan.shadow.finishSec - sec))}.`,
         tone: "celebrate",
       };
     }
@@ -403,6 +405,7 @@ function answerRunner(ctx: ToolContext, steps: CoachStep[], text: string): Draft
 }
 
 export function offlineCoach(req: CoachRequest, note?: string, plan?: Plan): CoachResponse {
+  ensureCoachCourse(req.race);
   const t0 = Date.now();
   const ctx = makeToolContext(req, plan);
   const steps: CoachStep[] = [];

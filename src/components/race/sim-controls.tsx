@@ -3,7 +3,7 @@
 import { CloudLightning, Cookie, Pause, Play, RotateCcw, Zap } from "lucide-react";
 import { cn } from "cn";
 import { SPEEDS, type RaceEngine, type RaceView } from "@/lib/engine";
-import { JUMP_TARGETS } from "@/lib/live";
+import { jumpTargets } from "@/lib/live";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -36,6 +36,7 @@ function Toggle({ id, label, hint, checked, onChange }: { id: string; label: str
 
 export function SimControls({ view, engine, className }: { view: RaceView; engine: RaceEngine; className?: string }) {
   const effortPct = Math.round(view.effort * 100);
+  const jumps = jumpTargets();
   return (
     <div className={cn("flex flex-wrap items-center gap-x-4 gap-y-2.5", className)}>
       <div className="flex flex-wrap items-center gap-2">
@@ -101,14 +102,14 @@ export function SimControls({ view, engine, className }: { view: RaceView; engin
 
       <div className="flex items-center gap-1.5">
         <Select value="" onValueChange={(id) => {
-          const target = JUMP_TARGETS.find((j) => j.id === id);
+          const target = jumps.find((j) => j.id === id);
           if (target) engine.seek(target.d);
         }}>
           <SelectTrigger size="sm" className="w-44 text-xs" aria-label="Jump to a point of the race">
             <SelectValue placeholder="Jump to…" />
           </SelectTrigger>
           <SelectContent>
-            {JUMP_TARGETS.map((j) => (
+            {jumps.map((j) => (
               <SelectItem key={j.id} value={j.id} className="text-xs">
                 <span className="flex flex-col">
                   <span>{j.label}</span>

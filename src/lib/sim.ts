@@ -1,5 +1,5 @@
-import { course, N_POINTS, STEP_M, TOTAL_M, localClockSec, stationD, climbStartD, climbEndD, nextCutoffStation, nextStation, idxAt, GRADE, type AidStation } from "@/lib/course";
-import { basePace, planStopSec, raceBeta, runTimeline, timeAtDistance, distanceAtTime, climbAtIdx, STATION_IDX, type Plan } from "@/lib/plan";
+import { course, N_POINTS, STEP_M, TOTAL_M, localClockSec, raceSecAtLocal, stationD, climbStartD, climbEndD, nextCutoffStation, nextStation, idxAt, GRADE, stationAtPoint, type AidStation } from "@/lib/course";
+import { basePace, planStopSec, raceBeta, runTimeline, timeAtDistance, distanceAtTime, climbAtIdx, type Plan } from "@/lib/plan";
 import type { RunnerProfile } from "@/lib/profile";
 import type { CoachAction } from "@/lib/coach/types";
 
@@ -176,14 +176,18 @@ function drainPerHour(s: SimState, i: number, profile: RunnerProfile) {
   return r;
 }
 
-const SUNRISE_T = ((course.sunriseLocalSec - 23 * 3600 + 86400) % 86400);
-const SUNSET_T = course.sunsetLocalSec + 3600;
-const TIME_EVENTS: { type: SimEventType; t: number }[] = [
-  { type: "night_low", t: 3.5 * 3600 },
-  { type: "sunrise", t: SUNRISE_T },
-  { type: "heat", t: 14 * 3600 },
-  { type: "sunset", t: SUNSET_T },
-];
+function timeEvents(): { type: SimEventType; t: number }[] {
+  const sunriseT = raceSecAtLocal(course.sunriseLocalSec);
+  const nightLowT = raceSecAtLocal(2.5 * 3600);
+  const out: { type: SimEventType; t: number }[] = [];
+  if (nightLowT > 20 * 60 && nightLowT < course.timeLimitSec) out.push({ type: "night_low", t: nightLowT });
+  if (sunriseT > 20 * 60 && sunriseT < course.timeLimitSec) out.push({ type: "sunrise", t: sunriseT });
+  const heatT = raceSecAtLocal(14 * 3600);
+  const sunsetT = raceSecAtLocal(course.sunsetLocalSec);
+  if (heatT > 60 * 60 && heatT < course.timeLimitSec) out.push({ type: "heat", t: heatT });
+  if (sunsetT > 60 * 60 && sunsetT < course.timeLimitSec) out.push({ type: "sunset", t: sunsetT });
+  return out;
+}
 
 export function shadowGapSec(s: SimState, plan: Plan) {
   return timeAtDistance(plan.shadow, s.d) - s.t;
@@ -302,7 +306,7 @@ export function stepSim(s: SimState, dt: number, ctx: SimContext, opts: { checki
   for (let km = Math.floor(prevD / 1000) + 1; km <= Math.floor(s.d / 1000); km++) s.kmTimes[km] = s.t;
 
   // Time events.
-  for (const te of TIME_EVENTS) {
+  for (const te of timeEvents()) {
     if (prevT < te.t && s.t >= te.t && !s.fired[te.type]) {
       s.fired[te.type] = true;
       ev.push({ type: te.type, t: s.t, d: s.d });
@@ -373,7 +377,7 @@ export function projectRace(s: SimState, ctx: SimContext) {
   const tl = runTimeline(
     { model: profile.model, effortScale: plan.effortScale * cond, beta: raceBeta(profile) },
     (st) => (st.id === s.stopAt ? 0 : runnerStopSec(s, st, profile)),
-    { fromIdx: i, fromT: startT, skipStopAtFrom: s.stopAt !== null || STATION_IDX.get(i) === undefined },
+    { fromIdx: i, fromT: startT, skipStopAtFrom: s.stopAt !== null || stationAtPoint.get(i) === undefined },
   );
   const arrivals: Record<string, number> = {};
   for (const st of course.aidStations) {

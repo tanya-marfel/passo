@@ -478,7 +478,7 @@ export function buildProfile(activities: Activity[], opts: { name?: string; sour
       move: "Wall",
       severity: clamp((8 - totals.longestH) / 6, 0.3, 0.9),
       confidence: "prior",
-      evidence: `Your longest run is ${fmtDuration(totals.longestH * 3600)} and ${totals.longestKm.toFixed(0)} km. Lavaredo will take you three to four times longer.`,
+      evidence: `Your longest run is ${fmtDuration(totals.longestH * 3600)} and ${totals.longestKm.toFixed(0)} km. A race this long will take several times that.`,
       advice: "Everything after hour 8 is new territory, so the first half must feel easy.",
     });
   }
@@ -490,7 +490,7 @@ export function buildProfile(activities: Activity[], opts: { name?: string; sour
       move: "Sleepwalk",
       severity: 0.5,
       confidence: "prior",
-      evidence: "None of your runs were in the dark. Lavaredo starts at 23:00 and the first 6 hours are by headlamp.",
+      evidence: "None of your runs were in the dark.",
       advice: "Plan caffeine for 02:30, keep eating at night, and expect the low point before dawn.",
     });
   }

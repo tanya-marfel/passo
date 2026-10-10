@@ -1,4 +1,5 @@
 import { course, localClockSec, stationD, climbStartD, nextStation, type AidStation } from "@/lib/course";
+import { coachRace } from "@/lib/races";
 import { timeAtDistance, type GoalId } from "@/lib/plan";
 import type { RunnerProfile } from "@/lib/profile";
 import { isDrowsy, projectRace, shadowGapSec, type SimContext, type SimEvent, type SimEventType, type SimState } from "@/lib/sim";
@@ -61,7 +62,7 @@ export function buildCoachRequest(
   goal: GoalId,
   history: CoachRequest["history"],
 ): CoachRequest {
-  return { trigger, live: liveSnapshot(s, ctx), profile: coachProfile(ctx.profile), goal, history: history.slice(-6) };
+  return { trigger, live: liveSnapshot(s, ctx), profile: coachProfile(ctx.profile), goal, race: coachRace() ?? undefined, history: history.slice(-6) };
 }
 
 /** 0 = must speak now and hold the race, 1 = speak and hold, 2 = background (no hold, droppable). */
@@ -179,7 +180,7 @@ export function battleText(e: SimEvent, profile: RunnerProfile): { text: string;
     case "night_low":
       return { text: "02:30. The night is at its darkest.", tone: "system" };
     case "sunrise":
-      return { text: "The sun rises over the Dolomites.", tone: "system" };
+      return { text: "Sunrise. Headlamp off when you can.", tone: "system" };
     case "heat":
       return { text: "Midday heat: the valley is baking.", tone: "system" };
     case "sunset":
@@ -191,7 +192,7 @@ export function battleText(e: SimEvent, profile: RunnerProfile): { text: string;
     case "missed_fuel":
       return { text: "You skipped your gels.", tone: "bad" };
     case "finish":
-      return { text: `FINISH! Lavaredo conquered in ${fmtHm(Number(d.sec))}.`, tone: "good" };
+      return { text: `Finished in ${fmtHm(Number(d.sec))}.`, tone: "good" };
     case "runner_message":
     case "checkin":
       return null;
@@ -239,19 +240,23 @@ export function nightness(raceSec: number) {
 
 export type JumpTarget = { id: string; label: string; detail: string; d: number };
 
-export const JUMP_TARGETS: JumpTarget[] = [
-  { id: "start", label: "Start in Cortina", detail: "km 0 · Fri 23:00", d: 0 },
-  ...course.climbs.map((c, i) => ({
-    id: c.id,
-    label: `Gym ${i + 1}: ${c.name}`,
-    detail: `km ${c.startKm.toFixed(1)} · ${c.gain} m up`,
-    d: Math.max(0, climbStartD(c) - 900),
-  })),
-  ...course.aidStations
-    .filter((s) => s.kind === "lifebase")
-    .map((s) => ({ id: s.id, label: `${s.name} life base`, detail: `km ${s.km.toFixed(1)} · drop bags`, d: stationD(s) - 1500 })),
-  { id: "final", label: "Final descent", detail: "km 111 · Croda da Lago", d: 110950 },
-].sort((a, b) => a.d - b.d);
+export function jumpTargets(): JumpTarget[] {
+  const lastClimb = course.climbs.at(-1);
+  const targets: JumpTarget[] = [
+    { id: "start", label: "Start", detail: `km 0 · ${course.startLocal}`, d: 0 },
+    ...course.climbs.map((c) => ({
+      id: c.id,
+      label: c.name,
+      detail: `km ${c.startKm.toFixed(1)} · ${c.gain} m up`,
+      d: Math.max(0, climbStartD(c) - 900),
+    })),
+    ...course.aidStations
+      .filter((s) => s.kind === "lifebase")
+      .map((s) => ({ id: s.id, label: s.name, detail: `km ${s.km.toFixed(1)}`, d: Math.max(0, stationD(s) - 1500) })),
+  ];
+  if (lastClimb) targets.push({ id: "final", label: "Last climb", detail: lastClimb.name, d: Math.max(0, climbStartD(lastClimb) - 400) });
+  return targets.sort((a, b) => a.d - b.d);
+}
 
 export function nextAidInfo(s: SimState, arrivals: Record<string, number>) {
   const st: AidStation | null = nextStation(s.d, (x) => x.kind !== "checkpoint" && x.kind !== "start");

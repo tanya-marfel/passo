@@ -1,6 +1,6 @@
 # Rival Run
 
-**Race the runner you used to be.** Rival Run reads your Garmin history, finds the mistakes you keep making, and turns them into your **Shadow**: a rival that runs Lavaredo Ultra Trail 120K (June 2027) exactly like the old you. **Marmo**, a live AI trail coach, rides along on a 3D map of the Dolomites and calls the race kilometre by kilometre.
+**Race the runner you used to be.** You name the race (Lavaredo, UTMB, CCC, Western States, or a distance and the climbing) and add a Garmin history. Rival Run writes a short report, then simulates the run while Marmo speaks the calls that would have changed the result. Lavaredo uses the official track. Other races use a sketch built from the distance and climb.
 
 Built for an agentic AI hackathon with Google DeepMind Gemini (agent brain), Gradium (voice) and Entire (agent session checkpoints).
 
@@ -52,9 +52,9 @@ To turn that button on, register RaceIQ once in the [Garmin Connect Developer Pr
 
 ## Demo script (about 3 minutes)
 
-1. Click **Sign in with Garmin** (or **Try the sample runner**). The trainer card shows your stats; **Your Shadow's moves** lists the mistakes found in your runs.
-2. Pick a goal, compare your plan with your Shadow's finish, and click **Start live race**.
-3. Click **Start the race**: Marmo briefs you (voice) and your Shadow sprints off with Fast Start.
+1. Say or type the race, for example "Lavaredo 120K next June", and click **Sample runner** (or drop a Garmin export).
+2. Read the report. Pick a goal and click **Simulate**.
+3. Click **Start**: Marmo briefs you out loud, and the shadow runs the mistakes from the history.
 4. At the first gym Marmo tells you how to pace the climb; at the summit you earn a badge.
 5. Click **Inject > Cramp**. The Agent tab shows the tool calls (`get_race_status`, `replan`, `speak`) and the actions applied: salt and fluids, effort down 8% for 30 minutes.
 6. Tap the mic and ask "Will I make the Cimabanche cut-off?"
