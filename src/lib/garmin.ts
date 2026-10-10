@@ -162,18 +162,50 @@ async function parseFit(bytes: Uint8Array, fileName: string) {
   return toActivity(raw, { name: fileName.replace(/\.[^.]+$/, ""), sport, source: "fit", fileName });
 }
 
-async function parseEntry(name: string, bytes: Uint8Array, depth: number, result: ImportResult) {
+export type ImportProgress = (message: string) => void;
+
+const MAX_ACTIVITY_FILES_PER_ZIP = 150;
+const MAX_FILE_BYTES = 1.5e9;
+const ACTIVITY_FILE = /\.(fit|gpx|tcx)$/i;
+const basename = (path: string) => path.split("/").pop() ?? path;
+const yieldToUi = () => new Promise((r) => setTimeout(r, 0));
+
+async function parseZip(name: string, bytes: Uint8Array, depth: number, result: ImportResult, progress?: ImportProgress) {
+  if (depth > 2) return;
+  const { unzipSync } = await import("fflate");
+  const listed: { path: string; size: number }[] = [];
+  unzipSync(bytes, {
+    filter: (f) => {
+      if (!f.name.startsWith("__MACOSX/") && /\.(fit|gpx|tcx|zip)$/i.test(f.name)) listed.push({ path: f.name, size: f.originalSize });
+      return false;
+    },
+  });
+  // A full account export keeps the uploaded FIT files in nested ZIPs. Long runs are the biggest files, so read those first.
+  const zips = listed.filter((e) => /\.zip$/i.test(e.path));
+  const activities = listed.filter((e) => ACTIVITY_FILE.test(e.path)).sort((a, b) => b.size - a.size);
+  const chosen = [...zips, ...activities.slice(0, MAX_ACTIVITY_FILES_PER_ZIP)];
+  if (!chosen.length) {
+    result.skipped.push({ file: name, reason: "zip contains no FIT, GPX or TCX files" });
+    return;
+  }
+  if (activities.length > MAX_ACTIVITY_FILES_PER_ZIP) {
+    result.skipped.push({ file: name, reason: `read the ${MAX_ACTIVITY_FILES_PER_ZIP} largest of ${activities.length} activity files` });
+  }
+  const keep = new Set(chosen.map((e) => e.path));
+  const entries = unzipSync(bytes, { filter: (f) => keep.has(f.name) });
+  for (let i = 0; i < chosen.length; i++) {
+    if (i % 4 === 0) {
+      progress?.(`Reading ${basename(name)}: file ${i + 1} of ${chosen.length}…`);
+      await yieldToUi();
+    }
+    await parseEntry(basename(chosen[i].path), entries[chosen[i].path], depth + 1, result, progress);
+  }
+}
+
+async function parseEntry(name: string, bytes: Uint8Array, depth: number, result: ImportResult, progress?: ImportProgress) {
   const lower = name.toLowerCase();
   try {
-    if (lower.endsWith(".zip")) {
-      if (depth > 2) return;
-      const { unzipSync } = await import("fflate");
-      const entries = unzipSync(bytes);
-      const names = Object.keys(entries).filter((n) => /\.(fit|gpx|tcx|zip)$/i.test(n));
-      if (!names.length) result.skipped.push({ file: name, reason: "zip contains no FIT, GPX or TCX files" });
-      for (const n of names.slice(0, 200)) await parseEntry(n.split("/").pop() ?? n, entries[n], depth + 1, result);
-      return;
-    }
+    if (lower.endsWith(".zip")) return await parseZip(name, bytes, depth, result, progress);
     let parsed: Activity | string;
     if (lower.endsWith(".fit")) parsed = await parseFit(bytes, name);
     else if (lower.endsWith(".gpx")) parsed = parseGpx(new TextDecoder().decode(bytes), name);
@@ -187,11 +219,19 @@ async function parseEntry(name: string, bytes: Uint8Array, depth: number, result
   }
 }
 
-export async function importFiles(files: File[]): Promise<ImportResult> {
+export async function importFiles(files: File[], progress?: ImportProgress): Promise<ImportResult> {
   const result: ImportResult = { activities: [], skipped: [] };
-  for (const f of files) {
-    const bytes = new Uint8Array(await f.arrayBuffer());
-    await parseEntry(f.name, bytes, 0, result);
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    if (f.size > MAX_FILE_BYTES) {
+      result.skipped.push({ file: f.name, reason: "too large to read in the browser; unzip it and drop the FIT files from DI-Connect-Uploaded-Files" });
+      continue;
+    }
+    if (files.length > 1) {
+      progress?.(`Reading file ${i + 1} of ${files.length}…`);
+      await yieldToUi();
+    }
+    await parseEntry(f.name, new Uint8Array(await f.arrayBuffer()), 0, result, progress);
   }
   const seen = new Set<number>();
   result.activities = result.activities

@@ -38,7 +38,7 @@ export function ImportScreen({ status, onProfile }: { status: PartnerStatus | nu
     setBusy(`Reading ${files.length} file${files.length > 1 ? "s" : ""}…`);
     await nextTick();
     try {
-      const res = await importFiles(files);
+      const res = await importFiles(files, setBusy);
       setSkipped(res.skipped);
       if (!res.activities.length) {
         setError("No runs with GPS and timestamps were found in those files. Try FIT, GPX or TCX exports of your runs.");
