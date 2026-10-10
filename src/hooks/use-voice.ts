@@ -23,8 +23,17 @@ export function useSpeaker(gradium: boolean) {
   const tokenRef = useRef(0);
   const gradiumOk = useRef(true);
   const gradiumFailures = useRef(0);
+  const pausedRef = useRef(false);
+  const cutForPause = useRef(false);
+  const resumeUtterance = useRef<(() => void) | null>(null);
+  const resumeWaiters = useRef<Array<() => void>>([]);
   const [speaking, setSpeaking] = useState(false);
   const [engine, setEngine] = useState<VoiceEngine | null>(null);
+
+  const whenRunning = useCallback(() => {
+    if (!pausedRef.current) return Promise.resolve();
+    return new Promise<void>((resolve) => resumeWaiters.current.push(resolve));
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
@@ -34,8 +43,17 @@ export function useSpeaker(gradium: boolean) {
     return () => window.speechSynthesis.removeEventListener("voiceschanged", onChange);
   }, []);
 
+  const releaseWaiters = useCallback(() => {
+    const waiters = resumeWaiters.current;
+    resumeWaiters.current = [];
+    for (const resume of waiters) resume();
+  }, []);
+
   const stop = useCallback(() => {
     tokenRef.current++;
+    cutForPause.current = false;
+    resumeUtterance.current = null;
+    releaseWaiters();
     const a = audioRef.current;
     audioRef.current = null;
     if (a) {
@@ -44,29 +62,94 @@ export function useSpeaker(gradium: boolean) {
     }
     if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
     setSpeaking(false);
+  }, [releaseWaiters]);
+
+  const pause = useCallback(() => {
+    pausedRef.current = true;
+    const audio = audioRef.current;
+    if (audio && !audio.paused && !audio.ended) audio.pause();
+    const synth = typeof window !== "undefined" ? window.speechSynthesis : undefined;
+    if (synth?.speaking) {
+      // Chrome keeps playing through speechSynthesis.pause(), so cut the utterance and restart the rest later.
+      cutForPause.current = true;
+      synth.cancel();
+    }
   }, []);
+
+  const resume = useCallback(() => {
+    const wasPaused = pausedRef.current;
+    pausedRef.current = false;
+    const audio = audioRef.current;
+    if (wasPaused && audio && audio.paused && !audio.ended) void audio.play().catch(() => undefined);
+    const synth = typeof window !== "undefined" ? window.speechSynthesis : undefined;
+    synth?.resume();
+    const continueUtterance = resumeUtterance.current;
+    resumeUtterance.current = null;
+    if (continueUtterance) setTimeout(continueUtterance, 60);
+    releaseWaiters();
+  }, [releaseWaiters]);
 
   useEffect(() => stop, [stop]);
 
   const speakBrowser = useCallback((text: string, token: number) => {
+    const spoken = speakable(text);
     return new Promise<VoiceEngine>((resolve) => {
       if (!("speechSynthesis" in window) || window.speechSynthesis.getVoices().length === 0) return resolve("none");
-      const u = new SpeechSynthesisUtterance(speakable(text));
-      const v = pickBrowserVoice();
-      if (v) u.voice = v;
-      u.rate = 1.04;
-      u.pitch = 1.12;
-      const words = text.split(/\s+/).length;
-      const done = () => {
+      let offset = 0;
+      let safety = 0;
+      let settled = false;
+      const finish = (engine: VoiceEngine) => {
+        if (settled) return;
+        settled = true;
         clearTimeout(safety);
-        resolve(token === tokenRef.current ? "browser" : "none");
+        resolve(engine);
       };
-      const safety = setTimeout(done, words * 480 + 2500);
-      u.onend = done;
-      u.onerror = done;
-      window.speechSynthesis.speak(u);
+      const say = () => {
+        if (token !== tokenRef.current) return finish("none");
+        const from = offset;
+        const slice = spoken.slice(from).trim();
+        if (!slice) return finish(from > 0 ? "browser" : "none");
+        const u = new SpeechSynthesisUtterance(slice);
+        const v = pickBrowserVoice();
+        if (v) u.voice = v;
+        u.rate = 1.04;
+        u.pitch = 1.12;
+        const words = slice.split(/\s+/).length;
+        clearTimeout(safety);
+        safety = window.setTimeout(() => finish(token === tokenRef.current ? "browser" : "none"), words * 480 + 2500);
+        u.onboundary = (e) => {
+          if (typeof e.charIndex === "number" && e.charIndex > 0) offset = from + e.charIndex;
+        };
+        const parked = () => {
+          clearTimeout(safety);
+          resumeUtterance.current = () => {
+            if (token !== tokenRef.current) return finish("none");
+            say();
+          };
+        };
+        u.onend = () => {
+          if (token !== tokenRef.current) return finish("none");
+          if (cutForPause.current) {
+            cutForPause.current = false;
+            parked();
+            return;
+          }
+          finish("browser");
+        };
+        u.onerror = () => {
+          if (token !== tokenRef.current) return finish("none");
+          if (cutForPause.current) {
+            cutForPause.current = false;
+            parked();
+            return;
+          }
+          finish("browser");
+        };
+        window.speechSynthesis.speak(u);
+      };
+      void whenRunning().then(say);
     });
-  }, []);
+  }, [whenRunning]);
 
   const speak = useCallback(
     async (text: string): Promise<VoiceEngine> => {
@@ -94,7 +177,12 @@ export function useSpeaker(gradium: boolean) {
               audio.addEventListener("error", () => resolve(), { once: true });
             });
             try {
-              await audio.play();
+              await whenRunning();
+              if (token !== tokenRef.current) {
+                URL.revokeObjectURL(url);
+                return "none";
+              }
+              if (!pausedRef.current) await audio.play();
               gradiumFailures.current = 0;
               setEngine("gradium");
               await ended;
@@ -116,6 +204,8 @@ export function useSpeaker(gradium: boolean) {
           }
         }
         if (token !== tokenRef.current) return "none";
+        await whenRunning();
+        if (token !== tokenRef.current) return "none";
         const used = await speakBrowser(text, token);
         if (used === "browser") setEngine("browser");
         return used;
@@ -123,10 +213,10 @@ export function useSpeaker(gradium: boolean) {
         if (token === tokenRef.current) setSpeaking(false);
       }
     },
-    [gradium, speakBrowser, stop],
+    [gradium, speakBrowser, stop, whenRunning],
   );
 
-  return { speak, stop, speaking, engine };
+  return { speak, stop, pause, resume, speaking, engine };
 }
 
 type SpeechRecognitionLike = {

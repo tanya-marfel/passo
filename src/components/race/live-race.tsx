@@ -35,8 +35,8 @@ export function LiveRace({
   onExit: () => void;
 }) {
   const gradium = Boolean(status?.gradium);
-  const { speak, stop } = useSpeaker(gradium);
-  const speaker = useMemo(() => ({ speak, stop }), [speak, stop]);
+  const { speak, stop, pause, resume } = useSpeaker(gradium);
+  const speaker = useMemo(() => ({ speak, stop, pause, resume }), [speak, stop, pause, resume]);
   const { engine, view } = useRaceEngine(profile, plan, goal, speaker);
   const listener = useListener(gradium, (text) => engine.ask(text));
   const [follow, setFollow] = useState(true);

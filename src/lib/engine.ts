@@ -27,7 +27,7 @@ import {
   type StatusId,
 } from "@/lib/live";
 
-export type Speaker = { speak: (text: string) => Promise<unknown>; stop: () => void };
+export type Speaker = { speak: (text: string) => Promise<unknown>; stop: () => void; pause: () => void; resume: () => void };
 
 export type CoachTurn = {
   id: number;
@@ -204,6 +204,7 @@ export class RaceEngine {
       this.enqueue({ type: "race_start" }, 0);
     }
     this.ui.playing = true;
+    this.speaker?.resume();
     this.emitNow();
   }
 
@@ -213,6 +214,7 @@ export class RaceEngine {
 
   pause() {
     this.ui.playing = false;
+    this.speaker?.pause();
     this.emitNow();
   }
 
