@@ -58,7 +58,7 @@ function TrainerCard({ profile, onRename }: { profile: RunnerProfile; onRename: 
         <div className="min-w-0 flex-1">
           <div className="font-pixel text-[8px] text-muted-foreground">TRAINER CARD</div>
           <div className="mt-1.5 flex items-center gap-2">
-            <Input value={profile.name} onChange={(e) => onRename(e.target.value)} className="h-8 max-w-52 text-base font-semibold" aria-label="Your name" maxLength={20} />
+            <Input name="runner-name" autoComplete="nickname" value={profile.name} onChange={(e) => onRename(e.target.value)} className="h-8 max-w-52 text-base font-semibold" aria-label="Your name" maxLength={20} />
             <span className="font-pixel text-[9px] text-primary">Lv{profile.level}</span>
           </div>
           <div className="mt-1.5 text-sm">

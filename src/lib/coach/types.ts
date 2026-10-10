@@ -67,3 +67,12 @@ export type CoachResponse = {
   latencyMs: number;
   note?: string;
 };
+
+/** NDJSON lines sent by /api/coach when the client accepts application/x-ndjson. */
+export type CoachStreamEvent =
+  | { type: "start"; engine: CoachResponse["engine"]; model?: string }
+  | { type: "step"; step: CoachStep }
+  | { type: "done"; response: CoachResponse }
+  | { type: "error"; error: string };
+
+export const COACH_STREAM_TYPE = "application/x-ndjson";

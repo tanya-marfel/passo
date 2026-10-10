@@ -1,6 +1,6 @@
 import { course } from "@/lib/course";
 import { fmtClock, fmtDuration, fmtHm } from "@/lib/format";
-import type { CoachAction, CoachRequest, CoachResponse, CoachStep } from "@/lib/coach/types";
+import type { CoachAction, CoachRequest, CoachResponse, CoachStep, CoachStreamEvent } from "@/lib/coach/types";
 import { TOOL_DECLARATIONS, makeToolContext, runTool } from "@/lib/coach/tools";
 import { describeTrigger, offlineCoach } from "@/lib/coach/offline";
 
@@ -99,11 +99,16 @@ async function generate(key: string, model: string, body: Record<string, unknown
 
 const ACTIONS = new Set(["eat", "salt", "caffeine", "layer_up", "quick_aid", "pace_climb", "easy_start"]);
 
-export async function geminiCoach(req: CoachRequest, key: string): Promise<CoachResponse> {
+export async function geminiCoach(req: CoachRequest, key: string, onEvent?: (e: CoachStreamEvent) => void): Promise<CoachResponse> {
   const t0 = Date.now();
   const model = await pickGeminiModel(key);
+  onEvent?.({ type: "start", engine: "gemini", model });
   const ctx = makeToolContext(req);
   const steps: CoachStep[] = [];
+  const record = (step: CoachStep) => {
+    steps.push(step);
+    onEvent?.({ type: "step", step });
+  };
   const contents: Content[] = [{ role: "user", parts: [{ text: snapshotText(req) }] }];
   let useThinking = true;
 
@@ -118,8 +123,9 @@ export async function geminiCoach(req: CoachRequest, key: string): Promise<Coach
           functionCallingConfig: last ? { mode: "ANY", allowedFunctionNames: ["speak", "stay_silent"] } : { mode: "ANY" },
         },
         generationConfig: {
-          temperature: 0.6,
-          maxOutputTokens: 800,
+          // Gemini 3 models are tuned for the default temperature and degrade when it is lowered.
+          ...(/gemini-3/.test(model) ? {} : { temperature: 0.6 }),
+          maxOutputTokens: 2048,
           ...(useThinking && thinkingConfig(model) ? { thinkingConfig: thinkingConfig(model) } : {}),
         },
       };
@@ -143,7 +149,7 @@ export async function geminiCoach(req: CoachRequest, key: string): Promise<Coach
           .join(" ")
           .trim();
         if (text) {
-          steps.push({ tool: "speak", args: { message: text }, result: "spoken" });
+          record({ tool: "speak", args: { message: text }, result: "spoken" });
           return { engine: "gemini", model, decision: "speak", message: text, tone: "calm", actions: ctx.actions, steps, latencyMs: Date.now() - t0 };
         }
         throw new Error(`Gemini returned no tool call (${json.candidates?.[0]?.finishReason ?? "unknown"})`);
@@ -159,7 +165,7 @@ export async function geminiCoach(req: CoachRequest, key: string): Promise<Coach
             .map(String)
             .filter((a) => ACTIONS.has(a))
             .map((a) => ({ type: a }) as CoachAction);
-          steps.push({ tool: "speak", args, result: "spoken" });
+          record({ tool: "speak", args, result: "spoken" });
           return {
             engine: "gemini",
             model,
@@ -172,12 +178,12 @@ export async function geminiCoach(req: CoachRequest, key: string): Promise<Coach
           };
         }
         if (name === "stay_silent") {
-          steps.push({ tool: "stay_silent", args, result: "ok" });
+          record({ tool: "stay_silent", args, result: "ok" });
           return { engine: "gemini", model, decision: "silent", message: "", tone: "calm", actions: ctx.actions, steps, latencyMs: Date.now() - t0 };
         }
         const s0 = Date.now();
         const result = runTool(ctx, name, args);
-        steps.push({ tool: name, args, result, ms: Date.now() - s0 });
+        record({ tool: name, args, result, ms: Date.now() - s0 });
         responses.push({ functionResponse: { ...(id ? { id } : {}), name, response: { result } } });
       }
       contents.push({ role: "user", parts: responses });

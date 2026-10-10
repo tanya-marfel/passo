@@ -12,8 +12,9 @@ import {
   type SimEvent,
   type SimState,
 } from "@/lib/sim";
+import { requestCoach } from "@/lib/coach/client";
 import { offlineCoach } from "@/lib/coach/offline";
-import type { CoachRequest, CoachResponse, CoachTrigger } from "@/lib/coach/types";
+import type { CoachRequest, CoachResponse, CoachStep, CoachStreamEvent, CoachTrigger } from "@/lib/coach/types";
 import {
   battleText,
   buildCoachRequest,
@@ -36,6 +37,10 @@ export type CoachTurn = {
   t: number;
   d: number;
   status: "thinking" | "done";
+  /** tool calls streamed so far; replaced by response.steps when the turn finishes */
+  steps: CoachStep[];
+  engine?: CoachResponse["engine"];
+  model?: string;
   response?: CoachResponse;
   applied: boolean;
 };
@@ -423,7 +428,7 @@ export class RaceEngine {
     const epoch = this.epoch;
     if (next.prio <= 1 && this.ui.holdForCoach) this.holding = true;
 
-    const turn: CoachTurn = {
+    let turn: CoachTurn = {
       id: ++this.turnSeq,
       label: next.auto ? "Status update" : triggerLabel(next.trigger),
       trigger: next.trigger,
@@ -431,23 +436,28 @@ export class RaceEngine {
       t: this.s.t,
       d: this.s.d,
       status: "thinking",
+      steps: [],
       applied: false,
+    };
+    const update = (patch: Partial<CoachTurn>) => {
+      turn = { ...turn, ...patch };
+      this.ui.turns = this.ui.turns.map((x) => (x.id === turn.id ? turn : x));
+      if (this.ui.thinking?.id === turn.id) this.ui.thinking = turn.status === "thinking" ? turn : null;
     };
     this.ui.thinking = turn;
     this.ui.turns = [turn, ...this.ui.turns].slice(0, 30);
     this.emitNow();
 
     const req = buildCoachRequest(next.trigger, this.s, this.ctx, this.goal, this.history);
+    const onEvent = (e: CoachStreamEvent) => {
+      if (epoch !== this.epoch) return;
+      if (e.type === "start") update({ engine: e.engine, model: e.model });
+      else if (e.type === "step") update({ steps: [...turn.steps, e.step] });
+      this.emitNow();
+    };
     let res: CoachResponse;
     try {
-      const r = await fetch("/api/coach", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(req),
-        signal: AbortSignal.timeout(30000),
-      });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      res = (await r.json()) as CoachResponse;
+      res = await requestCoach(req, onEvent, AbortSignal.timeout(30000));
     } catch {
       res = offlineCoach(req, "The coach API was unreachable, so Marmo answered on-device.", this.ctx.plan);
     }
@@ -458,8 +468,7 @@ export class RaceEngine {
       applyCoachActions(this.s, res.actions);
       this.projAt = -Infinity;
     }
-    const done: CoachTurn = { ...turn, status: "done", response: res, applied };
-    this.ui.turns = this.ui.turns.map((x) => (x.id === turn.id ? done : x));
+    update({ status: "done", response: res, applied, steps: res.steps, engine: res.engine, model: res.model });
     this.ui.thinking = null;
 
     if (res.decision === "speak" && res.message) {

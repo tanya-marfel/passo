@@ -40,6 +40,43 @@ function engineLabel(engine: CoachLine["engine"] | undefined, model?: string) {
   return "Offline rules";
 }
 
+const TOOL_MOVES: Record<string, { move: string; doing: string }> = {
+  get_race_status: { move: "STATUS CHECK", doing: "Checking your pace, energy and cut-off margins" },
+  get_course_ahead: { move: "TRAIL SCOUT", doing: "Scouting the climbs and aid stations ahead" },
+  get_personal_patterns: { move: "MEMORY DIG", doing: "Digging through your Garmin runs" },
+  replan: { move: "REPLAN", doing: "Testing a new effort against the cut-offs" },
+  speak: { move: "PEP TALK", doing: "Choosing the words" },
+  stay_silent: { move: "QUIET FOCUS", doing: "Letting you run" },
+};
+
+function toolMove(tool: string) {
+  return TOOL_MOVES[tool] ?? { move: tool.replace(/_/g, " ").toUpperCase(), doing: "Working" };
+}
+
+function ThinkingState({ turn }: { turn: CoachTurn }) {
+  const last = turn.steps.at(-1);
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
+        <span className="truncate">
+          Marmo is thinking… <span className="text-foreground">{turn.label}</span>
+        </span>
+      </div>
+      {last ? (
+        <div key={turn.steps.length} className="animate-rise">
+          <p className="font-pixel text-[9px] leading-relaxed text-primary">Marmo used {toolMove(last.tool).move}!</p>
+          <p className="text-xs text-muted-foreground">{toolMove(last.tool).doing}</p>
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          {turn.engine === "gemini" ? `${engineLabel("gemini", turn.model)} is choosing a tool` : "Reading the course and your live status"}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function CoachDialog({ view, idleText }: { view: RaceView; idleText: string }) {
   const line = view.line;
   const thinking = view.thinking;
@@ -49,14 +86,9 @@ export function CoachDialog({ view, idleText }: { view: RaceView; idleText: stri
         <MarmoSprite height={76} talking={view.speaking} />
         <span className="font-pixel absolute -bottom-1 left-1/2 -translate-x-1/2 rounded bg-primary px-1 py-0.5 text-[7px] text-primary-foreground">MARMO</span>
       </div>
-      <div className="rpg-box min-h-[104px] flex-1 px-3.5 py-3" data-tone={line?.tone} aria-live="polite">
+      <div className="rpg-box min-h-[104px] min-w-0 flex-1 px-3.5 py-3" data-tone={line?.tone} aria-live="polite">
         {thinking ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="size-4 animate-spin text-primary" />
-            <span>
-              Marmo is reading the course… <span className="text-foreground">{thinking.label}</span>
-            </span>
-          </div>
+          <ThinkingState turn={thinking} />
         ) : line ? (
           <>
             <div className="mb-1 flex items-center gap-2">
@@ -116,6 +148,8 @@ export function AskBar({
           {listen === "transcribing" ? <Loader2 className="animate-spin" /> : micAvailable ? <Mic /> : <MicOff />}
         </Button>
         <Input
+          name="message"
+          autoComplete="off"
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={listen === "recording" ? "Listening… tap the mic to send" : "Ask Marmo anything about your race"}
@@ -164,6 +198,7 @@ function argText(args: Record<string, unknown>) {
 
 function TurnCard({ turn }: { turn: CoachTurn }) {
   const res = turn.response;
+  const engine = res?.engine ?? turn.engine;
   return (
     <div className="animate-rise rounded-lg border border-white/10 bg-white/[0.03] p-2.5 text-xs">
       <div className="flex items-center gap-2">
@@ -174,25 +209,31 @@ function TurnCard({ turn }: { turn: CoachTurn }) {
         </span>
       </div>
       {turn.trigger.text && !turn.auto && <div className="mt-1 text-muted-foreground italic">“{turn.trigger.text}”</div>}
+      {(engine || res) && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          <Badge variant={engine === "gemini" ? "default" : "secondary"} className="h-4 px-1.5 text-[10px]">
+            {engineLabel(engine, res?.model ?? turn.model)}
+          </Badge>
+          <span className="text-[10px] text-muted-foreground">
+            {res
+              ? `${(res.latencyMs / 1000).toFixed(1)} s · ${res.steps.length} steps · ${res.decision === "speak" ? "spoke" : "stayed silent"}`
+              : `${turn.steps.length} step${turn.steps.length === 1 ? "" : "s"} so far…`}
+          </span>
+        </div>
+      )}
+      {turn.steps.length > 0 && (
+        <ol className="mt-1.5 space-y-1">
+          {turn.steps.map((s, i) => (
+            <li key={i} className="animate-rise rounded bg-black/25 px-2 py-1 font-mono text-[10.5px] leading-snug">
+              <span className={cn(s.tool === "speak" ? "text-primary" : s.tool === "stay_silent" ? "text-muted-foreground" : "text-sky-300")}>{s.tool}</span>
+              <span className="text-muted-foreground">({argText(s.args)})</span>
+              {s.tool !== "speak" && s.tool !== "stay_silent" && <div className="truncate text-muted-foreground/80">→ {summarize(s.result)}</div>}
+            </li>
+          ))}
+        </ol>
+      )}
       {res && (
         <>
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            <Badge variant={res.engine === "gemini" ? "default" : "secondary"} className="h-4 px-1.5 text-[10px]">
-              {engineLabel(res.engine, res.model)}
-            </Badge>
-            <span className="text-[10px] text-muted-foreground">
-              {(res.latencyMs / 1000).toFixed(1)} s · {res.steps.length} steps · {res.decision === "speak" ? "spoke" : "stayed silent"}
-            </span>
-          </div>
-          <ol className="mt-1.5 space-y-1">
-            {res.steps.map((s, i) => (
-              <li key={i} className="rounded bg-black/25 px-2 py-1 font-mono text-[10.5px] leading-snug">
-                <span className={cn(s.tool === "speak" ? "text-primary" : s.tool === "stay_silent" ? "text-muted-foreground" : "text-sky-300")}>{s.tool}</span>
-                <span className="text-muted-foreground">({argText(s.args)})</span>
-                {s.tool !== "speak" && s.tool !== "stay_silent" && <div className="truncate text-muted-foreground/80">→ {summarize(s.result)}</div>}
-              </li>
-            ))}
-          </ol>
           {res.actions.length > 0 && (
             <div className="mt-1.5 flex flex-wrap items-center gap-1">
               {res.actions.map((a, i) => (

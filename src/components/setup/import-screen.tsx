@@ -125,6 +125,7 @@ export function ImportScreen({ status, onProfile }: { status: PartnerStatus | nu
               <input
                 ref={inputRef}
                 type="file"
+                name="garmin-files"
                 multiple
                 accept=".fit,.gpx,.tcx,.zip,application/zip,application/gpx+xml"
                 className="hidden"
