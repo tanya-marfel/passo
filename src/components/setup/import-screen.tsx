@@ -14,6 +14,7 @@ import { useListener } from "@/hooks/use-voice";
 import { AppHeader } from "@/components/app-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const nextTick = () => new Promise((r) => setTimeout(r, 30));
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -251,12 +252,26 @@ export function ImportScreen({
               <p className="mt-1 text-sm text-muted-foreground">Drop a ZIP, FIT, GPX, or TCX. Read in the browser.</p>
               <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
                 <Button onClick={() => inputRef.current?.click()}>Choose files</Button>
-                <button type="button" className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline" onClick={() => void loadSample()}>
-                  Sample runner
+                <button
+                  type="button"
+                  className="rounded-lg bg-amber-500/15 px-3 py-1.5 text-xs font-semibold text-amber-300 transition hover:bg-amber-500/25 active:scale-95"
+                  onClick={() => void loadSample()}
+                >
+                  ⚡ Try sample runner
                 </button>
-                <a href="/api/garmin/connect" className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
-                  Sign in with Garmin
-                </a>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <a
+                      href="/api/garmin/connect"
+                      className="text-xs text-muted-foreground/80 underline-offset-4 hover:text-foreground hover:underline"
+                    >
+                      Sign in with Garmin
+                    </a>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-64 text-xs">
+                    Garmin OAuth requires a registered Garmin Developer app. Use &quot;Try sample runner&quot; or drop FIT/GPX files for instant evaluation.
+                  </TooltipContent>
+                </Tooltip>
               </div>
             </>
           )}

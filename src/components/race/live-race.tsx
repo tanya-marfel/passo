@@ -226,6 +226,10 @@ export function LiveRace({
                   <p className="mt-3 text-[11px] text-muted-foreground">
                     Press <kbd className="rounded bg-white/10 px-1 py-0.5 font-mono text-[10px]">Space</kbd> anytime to pause · Click profile below to scrub
                   </p>
+
+                  <div className="mt-3 border-t border-white/8 pt-2.5 text-[10px] text-muted-foreground/75">
+                    <span className="font-medium text-foreground/90">Garmin Connect IQ Prototype</span> · Simulating the 48 km race digital twin so you can test Marmo&apos;s live agent calls without running the Dolomites today.
+                  </div>
                 </div>
               </div>
             )}
