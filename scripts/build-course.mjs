@@ -250,8 +250,9 @@ const out = {
   totalKm: +(totalM / 1000).toFixed(2),
   trackGainM: Math.round(up),
   trackLossM: Math.round(down),
-  sunriseSec: 6 * 3600 + 16 * 60,
-  sunsetSec: 22 * 3600 + 17 * 60,
+  // Local clock (seconds after midnight) for Cortina at the end of June.
+  sunriseLocalSec: 5 * 3600 + 20 * 60,
+  sunsetLocalSec: 21 * 3600 + 14 * 60,
   source: {
     gpx: OFFICIAL_GPX,
     page: "https://lavaredo.utmb.world/races/lavaredo120k",
