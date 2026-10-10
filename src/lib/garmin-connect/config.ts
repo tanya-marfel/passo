@@ -1,6 +1,7 @@
 /** Official Garmin Connect OAuth 2.0 PKCE. The user signs in on connect.garmin.com, never here. */
 
-export const GARMIN_AUTHORIZE_URL = "https://connect.garmin.com/oauth2Confirm";
+/** Garmin's current consent page. It sends the browser to the Garmin Connect sign-in, then back here after the user allows access. */
+export const GARMIN_AUTHORIZE_URL = "https://connect.garmin.com/partner/oauth2Confirm";
 export const GARMIN_TOKEN_URL = "https://diauth.garmin.com/di-oauth2-service/oauth/token";
 export const GARMIN_API = "https://apis.garmin.com/wellness-api/rest";
 

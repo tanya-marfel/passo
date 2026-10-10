@@ -13,7 +13,7 @@ function home(request: Request, flag: string, reason?: string) {
 export async function GET(request: Request) {
   if (!garminConfigured()) {
     return NextResponse.redirect(
-      home(request, "error", "Add GARMIN_CLIENT_ID and GARMIN_CLIENT_SECRET from your Garmin Connect developer app, then restart the server."),
+      home(request, "error", "Garmin's sign-in can't grant RaceIQ access until GARMIN_CLIENT_ID and GARMIN_CLIENT_SECRET are set."),
     );
   }
   const { verifier, challenge, state } = createPkce();
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   auth.searchParams.set("code_challenge_method", "S256");
   auth.searchParams.set("redirect_uri", redirectUri);
   auth.searchParams.set("state", state);
-  const res = NextResponse.redirect(auth);
+  const res = NextResponse.redirect(auth, 302);
   rememberLogin(res, state, verifier, request);
   return res;
 }

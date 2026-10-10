@@ -159,14 +159,14 @@ export function ImportScreen({
                     <p className="font-medium">Connect your Garmin account</p>
                     <p className="mt-1 text-sm text-muted-foreground">
                       {configured
-                        ? "You'll leave Rival Run, sign in on connect.garmin.com, and come straight back."
-                        : "Sign-in opens Garmin's own page once a Connect developer app is configured. The sample runner works until then."}
+                        ? "This opens Garmin Connect. Sign in with your Garmin account and allow RaceIQ to read your activities."
+                        : "This opens Garmin Connect once the app's client id and secret are in .env.local. You sign in there and allow RaceIQ to read your activities."}
                     </p>
                   </div>
                   <div className="flex flex-wrap justify-center gap-2">
                     <Button size="lg" asChild>
                       <a href="/api/garmin/connect">
-                        <Watch /> Connect Garmin
+                        <Watch /> Sign in with Garmin
                       </a>
                     </Button>
                     <Button size="lg" variant="secondary" onClick={() => void loadSample()}>
@@ -186,12 +186,12 @@ export function ImportScreen({
           )}
 
           <details className="mt-4 text-sm text-muted-foreground">
-            <summary className="cursor-pointer text-foreground/80">What to register on the Garmin developer portal</summary>
+            <summary className="cursor-pointer text-foreground/80">Garmin shows the allow screen for a registered app</summary>
             <ol className="mt-2 list-decimal space-y-1 pl-5">
-              <li>Create an app in the Garmin Connect Developer Program and paste its client id and secret into .env.local.</li>
+              <li>In the Garmin Connect developer program, create an app and paste its client id and secret into .env.local.</li>
               <li>Redirect URI: {origin ? `${origin}/api/garmin/callback` : "/api/garmin/callback"}</li>
               <li>Activity webhook: {origin ? `${origin}/api/garmin/webhook` : "/api/garmin/webhook"}</li>
-              <li>Allow Activity Export and Historical Data, then restart the dev server.</li>
+              <li>Enable Activity Export and Historical Data. Restart the dev server, then use Sign in with Garmin.</li>
             </ol>
           </details>
         </section>
