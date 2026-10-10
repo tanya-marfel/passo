@@ -50,7 +50,7 @@ export function ProfileScreen({
     <div className="flex min-h-dvh flex-col">
       <AppHeader status={status}>
         <button type="button" className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline" onClick={onChangeRace}>
-          Different race
+          Something else
         </button>
         <button type="button" className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline" onClick={onNewData}>
           Start over

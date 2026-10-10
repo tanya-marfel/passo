@@ -323,7 +323,7 @@ function customSpec(name: string, km: number, gain: number, gainEstimated: boole
 /** Turn a spoken or typed sentence into a race, or one question if it isn't enough. */
 export function interpretRace(text: string): { choice: RaceChoice; label: string } | { ask: string } {
   const raw = text.trim();
-  if (raw.length < 2) return { ask: "Tell me the race, or a distance and the climbing." };
+  if (raw.length < 2) return { ask: "What are you running? A name, or a distance and the climbing." };
   const q = raw.toLowerCase();
   if (/lavaredo|\blut\b|tre cime/.test(q)) return known("lut-120");
   if (/\bccc\b|courmayeur/.test(q)) return known("ccc");
@@ -336,7 +336,7 @@ export function interpretRace(text: string): { choice: RaceChoice; label: string
   const gainMatch = /(\d[\d,]{2,6})\s*(?:m\b|metres|meters)/.exec(q);
   let gain = gainMatch ? Number(gainMatch[1].replace(/,/g, "")) : null;
   if (gain !== null && gain < 200) gain = null;
-  if (km === null) return { ask: "I don't have a track for that. Give me a distance and the climbing, like 80 km and 4000 m." };
+  if (km === null) return { ask: "I don't have a track for that. What are you running, like 80 km and 4000 m?" };
 
   const gainEstimated = gain === null;
   km = Math.min(200, Math.max(10, km));

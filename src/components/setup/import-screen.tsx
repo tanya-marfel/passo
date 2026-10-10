@@ -163,9 +163,9 @@ export function ImportScreen({
     <div className="flex min-h-dvh flex-col">
       <AppHeader status={status} />
       <main className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center px-5 py-12 sm:px-6">
-        <h1 className="text-3xl font-medium tracking-tight text-balance">Which race, and your runs.</h1>
+        <h1 className="text-3xl font-medium tracking-tight text-balance">What are you running?</h1>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          Say the race. Add a Garmin history. You get a short report, then a simulation where Marmo talks you through the parts that usually go wrong.
+          Say what you are up to, then add a Garmin history. You get a short report, then a simulation where Marmo talks you through the parts that usually go wrong.
         </p>
 
         <form
@@ -175,20 +175,18 @@ export function ImportScreen({
             submitRace(line);
           }}
         >
-          <label htmlFor="race-line" className="text-sm">
-            The race
-          </label>
-          <div className="mt-2 flex gap-2">
+          <div className="flex gap-2">
             <Input
               id="race-line"
               name="race"
               value={line}
-              placeholder="I'm running Lavaredo next June"
+              placeholder="What are you up to?"
+              aria-label="What are you running?"
               autoComplete="off"
               onChange={(e) => setLine(e.target.value)}
             />
             {listener.available && (
-              <Button type="button" variant="secondary" aria-label={listener.state === "recording" ? "Stop listening" : "Say the race"} onClick={listener.toggle}>
+              <Button type="button" variant="secondary" aria-label={listener.state === "recording" ? "Stop listening" : "Say what you are running"} onClick={listener.toggle}>
                 <Mic />
               </Button>
             )}
