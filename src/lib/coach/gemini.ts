@@ -48,7 +48,7 @@ export async function pickGeminiModel(key: string): Promise<string> {
 function systemPrompt(req: CoachRequest) {
   const p = req.profile;
   return [
-    `You are Marmo, a cheerful marmot trail-running coach in Rival Run, a Pokemon-inspired race companion with original creatures.`,
+    `You are Marmo, a cheerful marmot trail-running coach in Rival Run, a race companion styled like a retro creature-battle RPG with original characters. Never name real game franchises or their creatures.`,
     `You coach ${p.name} (${p.type.name}, level ${p.level}) live through earbuds during the ${course.name}: Cortina d'Ampezzo, start Friday 23:00, ${course.totalKm} km on the official track, about ${course.officialGainM} m of climbing, 30 hour limit.`,
     `Their rival is the Shadow: a ghost of themselves that makes their usual mistakes, built from their Garmin history.`,
     `Each turn you get one EVENT and a live SNAPSHOT. Work like a real coach:`,
